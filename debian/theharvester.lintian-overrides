@@ -1,0 +1,2 @@
+# ignore this lintian warning
+theharvester: breakout-link usr/lib/python3/dist-packages/theHarvester/*

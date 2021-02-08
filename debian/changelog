@@ -1,0 +1,190 @@
+theharvester (3.2.3-0kali1) kali-dev; urgency=medium
+
+  * New upstream version 3.2.3
+  * Add Restrictions: superficial to autopkgtest
+
+ -- Sophie Brun <sophie@offensive-security.com>  Mon, 08 Feb 2021 11:45:55 +0100
+
+theharvester (3.2.2-0kali2) kali-dev; urgency=medium
+
+  * Fix installation of the wordlists
+
+ -- Sophie Brun <sophie@offensive-security.com>  Thu, 07 Jan 2021 10:47:15 +0100
+
+theharvester (3.2.2-0kali1) kali-dev; urgency=medium
+
+  [ Ben Wilson ]
+  * Fix email address
+
+  [ Sophie Brun ]
+  * New upstream version 3.2.2
+
+ -- Sophie Brun <sophie@offensive-security.com>  Thu, 17 Dec 2020 10:08:13 +0100
+
+theharvester (3.2.0-0kali1) kali-dev; urgency=medium
+
+  * New upstream version 3.2.0
+  * Remove merged patches
+  * Update build-deps and deps
+  * Update installation to use usptream setup.py
+  * Add lintian-overrides for breakout-link
+
+ -- Sophie Brun <sophie@offensive-security.com>  Fri, 11 Sep 2020 09:30:08 +0200
+
+theharvester (3.1-0kali4) kali-dev; urgency=medium
+
+  * Fix for issue 6450:
+    - Add a link to the wordlists
+    - Use an helper-script to change the run directory
+    - Add a patch to change directory of sqlite db
+  * Bump Standards-Version to 4.5.0
+
+ -- Sophie Brun <sophie@offensive-security.com>  Wed, 08 Jul 2020 12:06:35 +0200
+
+theharvester (3.1-0kali3) kali-dev; urgency=medium
+
+  [ Sven Höper ]
+  * Add missing depends: python3-yaml
+  * Packaging: Fix test command
+
+  [ Sophie Brun ]
+  * Add a script to mention that theharvester command is deprecated
+
+ -- Sophie Brun <sophie@offensive-security.com>  Wed, 18 Dec 2019 08:44:38 +0100
+
+theharvester (3.1-0kali2) kali-dev; urgency=medium
+
+  * Add missing depends: python3-dnspython
+
+ -- Sophie Brun <sophie@offensive-security.com>  Tue, 15 Oct 2019 18:20:09 +0200
+
+theharvester (3.1-0kali1) kali-dev; urgency=medium
+
+  [ Raphaël Hertzog ]
+  * Update Vcs-* fields for the move to gitlab.com
+  * Add GitLab's CI configuration file
+  * Configure git-buildpackage for Kali
+  * Update URL in GitLab's CI configuration file
+
+  [ g0tmi1k ]
+  * New format
+
+  [ Sophie Brun ]
+  * Update debian/watch
+  * New upstream version 3.1
+  * Remove obsolete patches
+  * Use debhelper-compat 12
+  * Update packaging to use setup.py
+  * Bump Standards-Version to 4.4.1
+
+ -- Sophie Brun <sophie@offensive-security.com>  Tue, 15 Oct 2019 08:59:27 +0200
+
+theharvester (3.0.6-0kali1) kali-dev; urgency=medium
+
+  * New upstream version 3.0.6
+
+ -- Sophie Brun <sophie@offensive-security.com>  Thu, 20 Dec 2018 09:27:33 +0100
+
+theharvester (3.0.5-0kali1) kali-dev; urgency=medium
+
+  * New upstream version 3.0.5
+  * Add dependency: python3-plotly
+  * Refresh patch
+  * Add minimal autopkgtest
+
+ -- Sophie Brun <sophie@offensive-security.com>  Wed, 19 Dec 2018 11:00:29 +0100
+
+theharvester (3.0.4-0kali1) kali-dev; urgency=medium
+
+  * New upstream version 3.0.4
+  * Switch to Python 3
+  * Add a minimal required version of wfuzz: this is the first version in
+    Python 3
+
+ -- Sophie Brun <sophie@offensive-security.com>  Thu, 13 Dec 2018 11:11:59 +0100
+
+theharvester (3.0.1-0kali1) kali-dev; urgency=medium
+
+  * New upstream version 3.0.1
+  * Bump Standards-Version to 4.2.1
+  * Update debian/copyright
+  * Add missing dependency: python-bs4
+  * Refresh patch
+
+ -- Sophie Brun <sophie@freexian.com>  Thu, 29 Nov 2018 14:40:11 +0100
+
+theharvester (3.0-0kali1) kali-dev; urgency=medium
+
+  * Upstream update
+
+ -- Ben Wilson <g0tmi1k@kali.org>  Tue, 09 Oct 2018 12:19:07 +0100
+
+theharvester (2.7.2~20180322-0kali1) kali-dev; urgency=medium
+
+  * Import new upstream version (Closes: 0004685)
+  * Bump Standards-Version and use debhelper 11
+  * Update debian/control and debian/theharvester.install
+  * Refresh patches
+  * Add wfuzz as dependency
+
+ -- Sophie Brun <sophie@freexian.com>  Thu, 19 Apr 2018 09:11:32 +0200
+
+theharvester (2.7-0kali1) kali-dev; urgency=medium
+
+  * Import new upstream release
+
+ -- Sophie Brun <sophie@freexian.com>  Tue, 19 Apr 2016 09:32:54 +0200
+
+theharvester (2.6-0kali1) kali-dev; urgency=medium
+
+  * Update watch file
+
+ -- Sophie Brun <sophie@freexian.com>  Wed, 27 Jan 2016 10:26:13 +0100
+
+theharvester (2.6-0kali0) kali; urgency=low
+
+  * Imported new upstream release (Closes: 0002291)
+
+ -- Devon Kearns <dookie@kali.org>  Tue, 26 May 2015 12:37:58 -0600
+
+theharvester (2.5+git20150109-0kali0) kali; urgency=medium
+
+  * Imported new upstream release (Closes: 0001961)
+
+ -- Devon Kearns <dookie@kali.org>  Fri, 09 Jan 2015 12:24:36 -0700
+
+theharvester (2.2a-1kali2) kali; urgency=low
+
+  * Patched usage output (Closes: 0001251)
+
+ -- Devon Kearns <dookie@kali.org>  Tue, 20 May 2014 10:49:13 -0600
+
+theharvester (2.2a-1kali1) kali; urgency=low
+
+  * Updated watch file
+
+ -- Mati Aharoni <muts@kali.org>  Sun, 12 Jan 2014 15:40:59 -0500
+
+theharvester (2.2a-1kali0) kali; urgency=low
+
+  * New upstream version
+
+ -- Devon Kearns <dookie@kali.org>  Sat, 09 Feb 2013 14:47:29 -0700
+
+theharvester (2.2-1kali3) kali; urgency=low
+
+  * Cleaned up debian files
+
+ -- balding_parrot <balding_parrot@kali.org>  Tue, 18 Dec 2012 22:49:17 +0000
+
+theharvester (2.2-1kali2) kali; urgency=low
+
+  * Removed desktop file
+
+ -- balding_parrot <balding_parrot@kali.org>  Tue, 18 Dec 2012 22:32:47 +0000
+
+theharvester (2.2-1kali1) kali; urgency=low
+
+  * Initial release 
+
+ -- balding_parrot <balding_parrot@kali.org>  Tue, 18 Dec 2012 08:21:47 +0000

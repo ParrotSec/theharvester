@@ -1,0 +1,38 @@
+From: Sophie Brun <sophie@offensive-security.com>
+Date: Thu, 7 Jan 2021 10:19:09 +0100
+Subject: Improve data installation
+
+Bug-Kali: https://gitlab.com/kalilinux/packages/theharvester/-/issues/6
+
+By default the wordlists were installed directly in /etc/theHarvester
+instead of /etc/theHarvester/wordlists
+---
+ setup.py | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/setup.py b/setup.py
+index 128bd89..34a3ef0 100755
+--- a/setup.py
++++ b/setup.py
+@@ -26,13 +26,17 @@
+     ],
+     data_files=[
+         ('/etc/theHarvester', [
+-            'wordlists/general/common.txt',
++            'api-keys.yaml',
++            'proxies.yaml'
++        ]),
++        ('/etc/theHarvester/wordlists', [
+             'wordlists/dns-big.txt',
+             'wordlists/dns-names.txt',
+             'wordlists/dorks.txt',
+-            'wordlists/names_small.txt',
+-            'api-keys.yaml',
+-            'proxies.yaml'
++            'wordlists/names_small.txt'
++        ]),
++        ('/etc/theHarvester/wordlists/general', [
++            'wordlists/general/common.txt'
+         ]
+         )
+     ],
