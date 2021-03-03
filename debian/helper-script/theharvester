@@ -1,5 +1,0 @@
-#!/bin/sh
-
-set -e
-
-echo "The command theharvester is deprecated. Please use theHarvester instead."
