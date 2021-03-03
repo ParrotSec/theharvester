@@ -1,3 +1,13 @@
+theharvester (3.2.3-parrot0) rolling-testing; urgency=medium
+
+  * Remove Kali ci scripts
+  * Init Parrot team info
+  * Remove old command
+  * Add launcher
+  * Edit launcher command
+
+ -- Nong Hoang Tu <dmknght@parrotsec.org>  Thu, 04 Mar 2021 00:39:41 +0700
+
 theharvester (3.2.3-0kali1) kali-dev; urgency=medium
 
   * New upstream version 3.2.3
