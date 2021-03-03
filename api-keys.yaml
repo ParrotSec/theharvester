@@ -1,0 +1,31 @@
+apikeys:
+  bing:
+    key:
+
+  censys:
+    id:
+    secret:
+
+  github:
+    key: 
+
+  hunter:
+    key:
+
+  intelx:
+    key:
+
+  pentestTools:
+    key:
+
+  projectDiscovery:
+    key:
+
+  securityTrails:
+    key:
+
+  shodan:
+    key:
+
+  spyse:
+    key:
