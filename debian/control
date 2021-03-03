@@ -1,8 +1,9 @@
 Source: theharvester
 Section: utils
 Priority: optional
-Maintainer: Kali Developers <devel@kali.org>
-Uploaders: Ben Wilson <g0tmi1k@kali.org>, Sophie Brun <sophie@offensive-security.com>
+XSBC-Original-Maintainer: Kali Developers <devel@kali.org>
+Maintainer: Parrot Team <team@parrotsec.org>
+Uploaders: Nong Hoang Tu <dmknght@parrotsec.org>
 Build-Depends: debhelper-compat (= 12),
                dh-python,
                python3-aiohttp,
@@ -12,8 +13,8 @@ Build-Depends: debhelper-compat (= 12),
                python3-yaml
 Standards-Version: 4.5.1
 Homepage: https://github.com/laramies/theHarvester
-Vcs-Git: https://gitlab.com/kalilinux/packages/theharvester.git
-Vcs-Browser: https://gitlab.com/kalilinux/packages/theharvester
+Vcs-Git: https://nest.parrotsec.org/packages/tools/theharvester.git
+Vcs-Browser: https://nest.parrotsec.org/packages/tools/theharvester
 
 Package: theharvester
 Architecture: all
