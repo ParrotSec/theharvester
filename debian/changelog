@@ -1,3 +1,9 @@
+theharvester (3.2.4-parrot0) rolling-testing; urgency=medium
+
+  * New upstream version 3.2.4
+
+ -- Nong Hoang Tu <dmknght@parrotsec.org>  Wed, 07 Apr 2021 01:40:29 +0700
+
 theharvester (3.2.3-parrot0) rolling-testing; urgency=medium
 
   * Remove Kali ci scripts
