@@ -1,3 +1,9 @@
+theharvester (4.0.0-0parrot1) rolling-testing; urgency=medium
+
+  * New upstream version 4.0.0
+
+ -- Nong Hoang Tu <dmknght@parrotsec.org>  Sun, 11 Jul 2021 12:51:08 +0700
+
 theharvester (3.2.4-parrot0) rolling-testing; urgency=medium
 
   * New upstream version 3.2.4
