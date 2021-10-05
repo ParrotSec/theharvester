@@ -35,7 +35,8 @@ class SearchDnsDumpster:
 
             # extract csrftoken from cookies
             data = {
-                'Cookie': f'csfrtoken={csrftoken}', 'csrfmiddlewaretoken': csrftoken, 'targetip': self.word}
+                'Cookie': f'csfrtoken={csrftoken}', 'csrfmiddlewaretoken': csrftoken,
+                'targetip': self.word, 'user': 'free'}
             headers['Referer'] = url
             if self.proxy is False:
                 async with session.post(url, headers=headers, data=data) as resp:

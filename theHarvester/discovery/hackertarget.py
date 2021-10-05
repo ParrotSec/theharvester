@@ -5,6 +5,7 @@ class SearchHackerTarget:
     """
     Class uses the HackerTarget api to gather subdomains and ips
     """
+
     def __init__(self, word):
         self.word = word
         self.total_results = ""
@@ -24,4 +25,4 @@ class SearchHackerTarget:
         await self.do_search()
 
     async def get_hostnames(self) -> list:
-        return self.total_results.splitlines()
+        return [result for result in self.total_results.splitlines() if 'No PTR records found' not in result]
