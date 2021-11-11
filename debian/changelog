@@ -1,3 +1,9 @@
+theharvester (4.0.2-0parrot1) rolling-testing; urgency=medium
+
+  * New upstream version 4.0.2
+
+ -- Nong Hoang Tu <dmknght@parrotsec.org>  Fri, 12 Nov 2021 00:31:07 +0700
+
 theharvester (4.0.1-0parrot2) rolling; urgency=medium
 
   * Remove launcher
