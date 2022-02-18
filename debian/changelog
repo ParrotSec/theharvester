@@ -1,3 +1,9 @@
+theharvester (4.0.3-0parrot2) parrot-updates; urgency=medium
+
+  * Add python3-ujson to runtime dependencies
+
+ -- Nong Hoang Tu <dmknght@parrotsec.org>  Fri, 18 Feb 2022 17:25:31 +0700
+
 theharvester (4.0.3-0parrot1) rolling-testing; urgency=medium
 
   * New upstream version 4.0.3
