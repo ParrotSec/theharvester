@@ -1,4 +1,7 @@
 apikeys:
+  bevigil:
+   key:
+
   binaryedge:
     key:
 
@@ -36,7 +39,7 @@ apikeys:
   shodan:
     key:
 
-  spyse:
+  virustotal:
     key:
 
   zoomeye:
