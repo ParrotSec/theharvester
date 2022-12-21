@@ -1,44 +1,50 @@
 Source: theharvester
 Section: utils
 Priority: optional
-XSBC-Original-Maintainer: Kali Developers <devel@kali.org>
-Maintainer: Parrot Team <team@parrotsec.org>
-Uploaders: Nong Hoang Tu <dmknght@parrotsec.org>
+Maintainer: Parrot Dev Team <team@parrotsec.org>
+Uploaders: Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>
 Build-Depends: debhelper-compat (= 12),
                dh-python,
                python3-aiohttp,
                python3-all,
                python3-certifi,
+               python3-requests,
                python3-setuptools,
                python3-yaml
-Standards-Version: 4.5.1
+Standards-Version: 4.6.1
 Homepage: https://github.com/laramies/theHarvester
-Vcs-Git: https://nest.parrotsec.org/packages/tools/theharvester.git
-Vcs-Browser: https://nest.parrotsec.org/packages/tools/theharvester
 
 Package: theharvester
 Architecture: all
 Depends: python3,
          python3-aiodns (>= 2.0.0),
          python3-aiohttp (>= 3.6.2),
+         python3-aiofiles,
          python3-aiomultiprocess (>= 0.8.0),
          python3-aiosqlite (>= 0.15.0),
          python3-bs4 (>= 4.9.1),
-         python3-certifi,
+         python3-censys (>= 2.1.7),
+         python3-certifi (>= 2022.6.15),
          python3-dnspython (>= 2.0.0),
+# python3-fastapi: upstream went from 0.70.0 to 0.79.0
+# packaged in Debian, rev deps: theharvester, witnessme
+         python3-fastapi (>= 0.74.0),
          python3-lxml (>= 4.5.2),
          python3-netaddr (>= 0.7.19),
-         python3-plotly (>= 4.9.0),
-         python3-pyppeteer (>= 0.2.2),
+         python3-ujson,
+         python3-pyppeteer (>= 1.0.2),
          python3-requests (>= 2.23.0),
          python3-retrying (>= 1.3.3),
          python3-shodan (>= 1.23.0),
+         python3-slowapi,
+         python3-starlette,
          python3-texttable (>= 1.6.2),
+         python3-uvicorn,
          python3-uvloop (>= 0.14.0),
          python3-yaml (>= 5.3.1),
-         python3-ujson,
          ${misc:Depends},
-         ${python3:Depends}
+         ${python3:Depends},
+         kali-defaults,
 Description: tool for gathering e-mail accounts and subdomain names from public sources
  The package contains a tool for gathering subdomain names, e-mail addresses,
  virtual hosts, open ports/ banners, and employee names from different public

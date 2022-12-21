@@ -1,50 +1,8 @@
 theharvester (4.2.0-0parrot1) parrot-updates; urgency=medium
 
-  * New upstream version 4.2.0
+  * Import new Upstream release.
 
- -- Nong Hoang Tu <dmknght@parrotsec.org>  Mon, 05 Sep 2022 21:08:25 +0700
-
-theharvester (4.0.3-0parrot2) parrot-updates; urgency=medium
-
-  * Add python3-ujson to runtime dependencies
-
- -- Nong Hoang Tu <dmknght@parrotsec.org>  Fri, 18 Feb 2022 17:25:31 +0700
-
-theharvester (4.0.3-0parrot1) rolling-testing; urgency=medium
-
-  * New upstream version 4.0.3
-
- -- Nong Hoang Tu <dmknght@parrotsec.org>  Fri, 26 Nov 2021 23:02:28 +0700
-
-theharvester (4.0.2-0parrot1) rolling-testing; urgency=medium
-
-  * New upstream version 4.0.2
-
- -- Nong Hoang Tu <dmknght@parrotsec.org>  Fri, 12 Nov 2021 00:31:07 +0700
-
-theharvester (4.0.1-0parrot2) rolling; urgency=medium
-
-  * Remove launcher
-
- -- Nong Hoang Tu <dmknght@parrotsec.org>  Fri, 29 Oct 2021 23:02:44 +0700
-
-theharvester (4.0.1-0parrot1) rolling-testing; urgency=medium
-
-  * New upstream version 4.0.1
-
- -- Nong Hoang Tu <dmknght@parrotsec.org>  Tue, 05 Oct 2021 10:37:02 +0700
-
-theharvester (4.0.0-0parrot1) rolling-testing; urgency=medium
-
-  * New upstream version 4.0.0
-
- -- Nong Hoang Tu <dmknght@parrotsec.org>  Sun, 11 Jul 2021 12:51:08 +0700
-
-theharvester (3.2.4-parrot0) rolling-testing; urgency=medium
-
-  * New upstream version 3.2.4
-
- -- Nong Hoang Tu <dmknght@parrotsec.org>  Wed, 07 Apr 2021 01:40:29 +0700
+ -- Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>  Wed, 21 Dec 2022 12:59:39 +0100
 
 theharvester (3.2.3-parrot0) rolling-testing; urgency=medium
 

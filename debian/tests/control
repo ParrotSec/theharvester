@@ -1,2 +1,5 @@
+Test-Command: python3 -m pytest tests
+Depends: @, python3-pytest, python3-pytest-asyncio
+
 Test-Command: theHarvester -h
-Restrictions: superficial
+Restrictions: superficial, allow-stderr
