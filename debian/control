@@ -44,7 +44,6 @@ Depends: python3,
          python3-yaml (>= 5.3.1),
          ${misc:Depends},
          ${python3:Depends},
-         kali-defaults,
 Description: tool for gathering e-mail accounts and subdomain names from public sources
  The package contains a tool for gathering subdomain names, e-mail addresses,
  virtual hosts, open ports/ banners, and employee names from different public

@@ -1,3 +1,16 @@
+theharvester (4.2.0-0parrot3) parrot-updates; urgency=medium
+
+  * Update package dependencies.
+  * Update helper script.
+
+ -- Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>  Wed, 21 Dec 2022 15:11:49 +0100
+
+theharvester (4.2.0-0parrot2) parrot-updates; urgency=medium
+
+  * Rebuild package.
+
+ -- Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>  Wed, 21 Dec 2022 15:06:12 +0100
+
 theharvester (4.2.0-0parrot1) parrot-updates; urgency=medium
 
   * Import new Upstream release.

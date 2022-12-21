@@ -2,6 +2,5 @@
 
 set -e
 
-## Deprecated on 2019-12-18
-## https://gitlab.com/kalilinux/packages/theharvester/-/commit/fe0cf81d0123e57c3ea22e3bc5ca23946b16370b
-kali-deprecated theharvester theHarvester
+echo -e "this command is deprecated, use theHarvester instead"
+/usr/bin/theHarvester $@
