@@ -19,4 +19,4 @@ setuptools==64.0.3
 shodan==1.28.0
 slowapi==0.1.5
 uvicorn==0.18.2
-uvloop==0.16.0; platform_system != "Windows"
+uvloop==0.17.0; platform_system != "Windows"
