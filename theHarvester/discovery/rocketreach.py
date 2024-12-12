@@ -1,31 +1,31 @@
-from theHarvester.discovery.constants import *
-from theHarvester.lib.core import *
 import asyncio
+
+from theHarvester.discovery.constants import MissingKey, get_delay
+from theHarvester.lib.core import AsyncFetcher, Core
 
 
 class SearchRocketReach:
-
-    def __init__(self, word, limit):
-        self.ips = set()
+    def __init__(self, word, limit) -> None:
+        self.ips: set = set()
         self.word = word
         self.key = Core.rocketreach_key()
         if self.key is None:
             raise MissingKey('RocketReach')
-        self.hosts = set()
+        self.hosts: set = set()
         self.proxy = False
-        self.baseurl = 'https://api.rocketreach.co/v2/api/search'
-        self.links = set()
+        self.baseurl = 'https://rocketreach.co/api/v2/person/search'
+        self.links: set = set()
         self.limit = limit
 
-    async def do_search(self):
+    async def do_search(self) -> None:
         try:
             headers = {
                 'Api-Key': self.key,
                 'Content-Type': 'application/json',
-                'User-Agent': Core.get_user_agent()
+                'User-Agent': Core.get_user_agent(),
             }
 
-            next_page = 1  # track pagniation
+            next_page = 1  # track pagination
             for count in range(1, self.limit):
                 data = f'{{"query":{{"company_domain": ["{self.word}"]}}, "start": {next_page}, "page_size": 100}}'
                 result = await AsyncFetcher.post_fetch(self.baseurl, headers=headers, data=data, json=True)
@@ -34,8 +34,10 @@ class SearchRocketReach:
                     break
                 if 'detail' in result.keys() and 'Request was throttled.' in result['detail']:
                     # Rate limit has been triggered need to sleep extra
-                    print(f'RocketReach requests have been throttled; '
-                          f'{result["detail"].split(" ", 3)[-1].replace("available", "availability")}')
+                    print(
+                        f"RocketReach requests have been throttled; "
+                        f'{result["detail"].split(" ", 3)[-1].replace("available", "availability")}'
+                    )
                     break
                 if 'profiles' in dict(result).keys():
                     if len(result['profiles']) == 0:
@@ -48,7 +50,7 @@ class SearchRocketReach:
                     if next_page > int(result['pagination']['total']):
                         break
 
-            await asyncio.sleep(get_delay() + 2)
+            await asyncio.sleep(get_delay() + 5)
 
         except Exception as e:
             print(f'An exception has occurred: {e}')
@@ -56,6 +58,6 @@ class SearchRocketReach:
     async def get_links(self):
         return self.links
 
-    async def process(self, proxy=False):
+    async def process(self, proxy: bool = False) -> None:
         self.proxy = proxy
         await self.do_search()

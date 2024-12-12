@@ -1,31 +1,52 @@
-# coding=utf-8
 from __future__ import annotations
-from typing import Union, Any, Tuple, List
-import yaml
+
 import asyncio
-import aiohttp
+import contextlib
 import random
 import ssl
+from collections.abc import Sized
+from pathlib import Path
+from typing import Any
+
+import aiohttp
 import certifi
+
+# need to import as different name as to not shadow already existing json var in post_fetch
+import ujson as json_loader
+import yaml
+
+from .version import version
+
+DATA_DIR = Path(__file__).parents[1] / 'data'
+CONFIG_DIRS = [
+    Path('/etc/theHarvester/'),
+    Path('/usr/local/etc/theHarvester/'),
+    Path('~/.theHarvester'),
+]
 
 
 class Core:
     @staticmethod
-    def version() -> str:
-        return '4.2.0'
+    def _read_config(filename: str) -> str:
+        # Return the first we find
+        for path in CONFIG_DIRS:
+            with contextlib.suppress(FileNotFoundError):
+                file = path.expanduser() / filename
+                config = file.read_text()
+                print(f'Read {filename} from {file}')
+                return config
+
+        # Fallback to creating default in user's home dir
+        default = (DATA_DIR / filename).read_text()
+        dest = CONFIG_DIRS[-1].expanduser() / filename
+        dest.parent.mkdir(exist_ok=True)
+        dest.write_text(default)
+        print(f'Created default {filename} at {dest}')
+        return default
 
     @staticmethod
     def api_keys() -> dict:
-        try:
-            with open('/etc/theHarvester/api-keys.yaml', 'r') as api_keys:
-                keys = yaml.safe_load(api_keys)
-        except FileNotFoundError:
-            try:
-                with open('/usr/local/etc/theHarvester/api-keys.yaml', 'r') as api_keys:
-                    keys = yaml.safe_load(api_keys)
-            except FileNotFoundError:
-                with open('api-keys.yaml', 'r') as api_keys:
-                    keys = yaml.safe_load(api_keys)
+        keys = yaml.safe_load(Core._read_config('api-keys.yaml'))
         return keys['apikeys']
 
     @staticmethod
@@ -41,8 +62,16 @@ class Core:
         return Core.api_keys()['bing']['key']
 
     @staticmethod
+    def bufferoverun_key() -> str:
+        return Core.api_keys()['bufferoverun']['key']
+
+    @staticmethod
     def censys_key() -> tuple:
         return Core.api_keys()['censys']['id'], Core.api_keys()['censys']['secret']
+
+    @staticmethod
+    def criminalip_key() -> str:
+        return Core.api_keys()['criminalip']['key']
 
     @staticmethod
     def fullhunt_key() -> str:
@@ -57,12 +86,24 @@ class Core:
         return Core.api_keys()['hunter']['key']
 
     @staticmethod
+    def hunterhow_key() -> str:
+        return Core.api_keys()['hunterhow']['key']
+
+    @staticmethod
     def intelx_key() -> str:
         return Core.api_keys()['intelx']['key']
 
     @staticmethod
+    def netlas_key() -> str:
+        return Core.api_keys()['netlas']['key']
+
+    @staticmethod
     def pentest_tools_key() -> str:
         return Core.api_keys()['pentestTools']['key']
+
+    @staticmethod
+    def onyphe_key() -> str:
+        return Core.api_keys()['onyphe']['key']
 
     @staticmethod
     def projectdiscovery_key() -> str:
@@ -85,35 +126,29 @@ class Core:
         return Core.api_keys()['zoomeye']['key']
 
     @staticmethod
+    def tomba_key() -> tuple[str, str]:
+        return Core.api_keys()['tomba']['key'], Core.api_keys()['tomba']['secret']
+
+    @staticmethod
     def virustotal_key() -> str:
         return Core.api_keys()['virustotal']['key']
 
     @staticmethod
-    def proxy_list() -> List:
-        try:
-            with open('/etc/theHarvester/proxies.yaml', 'r') as proxy_file:
-                keys = yaml.safe_load(proxy_file)
-        except FileNotFoundError:
-            try:
-                with open('/usr/local/etc/theHarvester/proxies.yaml', 'r') as proxy_file:
-                    keys = yaml.safe_load(proxy_file)
-            except FileNotFoundError:
-                with open('proxies.yaml', 'r') as proxy_file:
-                    keys = yaml.safe_load(proxy_file)
+    def proxy_list() -> list:
+        keys = yaml.safe_load(Core._read_config('proxies.yaml'))
         http_list = [f'http://{proxy}' for proxy in keys['http']] if keys['http'] is not None else []
         return http_list
 
     @staticmethod
     def banner() -> None:
         print('*******************************************************************')
-        print("*  _   _                                            _             *")
-        print(r"* | |_| |__   ___    /\  /\__ _ _ ____   _____  ___| |_ ___ _ __  *")
+        print('*  _   _                                            _             *')
+        print(r'* | |_| |__   ___    /\  /\__ _ _ ____   _____  ___| |_ ___ _ __  *')
         print(r"* | __|  _ \ / _ \  / /_/ / _` | '__\ \ / / _ \/ __| __/ _ \ '__| *")
-        print(r"* | |_| | | |  __/ / __  / (_| | |   \ V /  __/\__ \ ||  __/ |    *")
-        print(r"*  \__|_| |_|\___| \/ /_/ \__,_|_|    \_/ \___||___/\__\___|_|    *")
+        print(r'* | |_| | | |  __/ / __  / (_| | |   \ V /  __/\__ \ ||  __/ |    *')
+        print(r'*  \__|_| |_|\___| \/ /_/ \__,_|_|    \_/ \___||___/\__\___|_|    *')
         print('*                                                                 *')
-        print(
-            '* theHarvester {version}{filler}*'.format(version=Core.version(), filler=' ' * (51 - len(Core.version()))))
+        print('* theHarvester {version}{filler}*'.format(version=version(), filler=' ' * (51 - len(version()))))
         print('* Coded by Christian Martorella                                   *')
         print('* Edge-Security Research                                          *')
         print('* cmartorella@edge-security.com                                   *')
@@ -122,114 +157,105 @@ class Core:
 
     @staticmethod
     def get_supportedengines() -> list[str | Any]:
-        supportedengines = ['anubis',
-                            'baidu',
-                            'bevigil',
-                            'binaryedge',
-                            'bing',
-                            'bingapi',
-                            'bufferoverun',
-                            'censys',
-                            'certspotter',
-                            'crtsh',
-                            'dnsdumpster',
-                            'duckduckgo',
-                            'fullhunt',
-                            'github-code',
-                            'hackertarget',
-                            'hunter',
-                            'intelx',
-                            'omnisint',
-                            'otx',
-                            'pentesttools',
-                            'projectdiscovery',
-                            'qwant',
-                            'rapiddns',
-                            'rocketreach',
-                            'securityTrails',
-                            'sublist3r',
-                            'threatcrowd',
-                            'threatminer',
-                            'urlscan',
-                            'virustotal',
-                            'yahoo',
-                            'zoomeye'
-                            ]
+        supportedengines = [
+            'anubis',
+            'baidu',
+            'bevigil',
+            'binaryedge',
+            'bing',
+            'bingapi',
+            'bufferoverun',
+            'brave',
+            'censys',
+            'certspotter',
+            'criminalip',
+            'crtsh',
+            'dnsdumpster',
+            'duckduckgo',
+            'fullhunt',
+            'github-code',
+            'hackertarget',
+            'hunter',
+            'hunterhow',
+            'intelx',
+            'netlas',
+            'onyphe',
+            'otx',
+            'pentesttools',
+            'projectdiscovery',
+            'rapiddns',
+            'rocketreach',
+            'securityTrails',
+            'sitedossier',
+            'subdomaincenter',
+            'subdomainfinderc99',
+            'threatminer',
+            'tomba',
+            'urlscan',
+            'virustotal',
+            'yahoo',
+            'zoomeye',
+        ]
         return supportedengines
 
     @staticmethod
     def get_user_agent() -> str:
         # User-Agents from https://techblog.willshouse.com/2012/01/03/most-common-user-agents/
+        # Lasted updated 7/2/23
+        # TODO use bs4 to auto parse user agents
         user_agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64; rv:100.0) Gecko/20100101 Firefox/100.0',
-            'Mozilla/5.0 (Windows NT 10.0; rv:91.0) Gecko/20100101 Firefox/91.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:100.0) Gecko/20100101 Firefox/100.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:101.0) Gecko/20100101 Firefox/101.0',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36 Edg/101.0.1210.53',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.5 Safari/605.1.15',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.62 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.61 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36 Edg/101.0.1210.47',
-            'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:100.0) Gecko/20100101 Firefox/100.0',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36 Edg/101.0.1210.39',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15',
-            'Mozilla/5.0 (X11; Linux x86_64; rv:91.0) Gecko/20100101 Firefox/91.0',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64; rv:99.0) Gecko/20100101 Firefox/99.0',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.75 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36',
-            'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:99.0) Gecko/20100101 Firefox/99.0',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36 Edg/101.0.1210.32',
-            'Mozilla/5.0 (X11; Linux x86_64; rv:101.0) Gecko/20100101 Firefox/101.0',
-            'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.0.0 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36 OPR/86.0.4363.59',
-            'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.41 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.141 YaBrowser/22.3.3.852 Yowser/2.5 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36 OPR/85.0.4341.75',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:99.0) Gecko/20100101 Firefox/99.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
-            'Mozilla/5.0 (X11; Fedora; Linux x86_64; rv:100.0) Gecko/20100101 Firefox/100.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.2 Safari/605.1.15',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.84 Safari/537.36 OPR/85.0.4341.71',
-            'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36 OPR/86.0.4363.64',
-            'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:100.0) Gecko/20100101 Firefox/100.0',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:101.0) Gecko/20100101 Firefox/101.0',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36 Edg/100.0.1185.50',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/114.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/114.0',
+            'Mozilla/5.0 (Windows NT 10.0; rv:114.0) Gecko/20100101 Firefox/114.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.43',
+            'Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/113.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 OPR/99.0.0.0',
+            'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/114.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/113.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.51',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.58',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.37',
+            'Mozilla/5.0 (Windows NT 10.0; rv:113.0) Gecko/20100101 Firefox/113.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5.1 Safari/605.1.15',
+            'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/113.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:102.0) Gecko/20100101 Firefox/102.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15',
+            'Mozilla/5.0 (Windows NT 10.0; rv:102.0) Gecko/20100101 Firefox/102.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36 Edg/113.0.1774.57',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.41',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.4 Safari/605.1.15',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36'
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 OPR/98.0.0.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 YaBrowser/23.5.2.625 Yowser/2.5 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6.1 Safari/605.1.15',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.75 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/112.0',
+            'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0',
+            'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Linux; Android 7.0; Moto G (4)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4590.2 Mobile Safari/537.36 Chrome-Lighthouse',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
         ]
         return random.choice(user_agents)
 
@@ -238,128 +264,176 @@ class AsyncFetcher:
     proxy_list = Core.proxy_list()
 
     @classmethod
-    async def post_fetch(cls, url, headers='', data='', params='', json=False, proxy=False):
+    async def post_fetch(
+        cls,
+        url,
+        headers=None,
+        data: str | dict[str, str] = '',
+        params: str = '',
+        json: bool = False,
+        proxy: bool = False,
+    ):
+        if headers is None:
+            headers = {}
         if len(headers) == 0:
             headers = {'User-Agent': Core.get_user_agent()}
         timeout = aiohttp.ClientTimeout(total=720)
-        # By default, timeout is 5 minutes, changed to 12 minutes
+        # By default, timeout is 5 minutes, changed to 12-minutes
         # results are well worth the wait
         try:
             if proxy:
-                proxy = str(random.choice(cls().proxy_list))
-                if params != "":
+                proxy = random.choice(cls().proxy_list)
+                if params != '':
                     async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
                         async with session.get(url, params=params, proxy=proxy) as response:
-                            await asyncio.sleep(2)
+                            await asyncio.sleep(5)
                             return await response.text() if json is False else await response.json()
                 else:
                     async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
                         async with session.get(url, proxy=proxy) as response:
-                            await asyncio.sleep(2)
+                            await asyncio.sleep(5)
                             return await response.text() if json is False else await response.json()
             elif params == '':
+                if isinstance(data, str):
+                    data = json_loader.loads(data)
                 async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
                     async with session.post(url, data=data) as resp:
                         await asyncio.sleep(3)
                         return await resp.text() if json is False else await resp.json()
             else:
+                if isinstance(data, str):
+                    data = json_loader.loads(data)
                 async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
                     sslcontext = ssl.create_default_context(cafile=certifi.where())
                     async with session.post(url, data=data, ssl=sslcontext, params=params) as resp:
                         await asyncio.sleep(3)
                         return await resp.text() if json is False else await resp.json()
         except Exception as e:
-            print(f'An exception has occurred: {e}')
+            print(f'An exception has occurred in post_fetch: {e}')
             return ''
 
-    @staticmethod
-    async def fetch(session, url, params='', json=False, proxy="") -> Union[str, dict, list, bool]:
+    @classmethod
+    async def fetch(cls, session, url, params: Sized = '', json: bool = False, proxy: str = '') -> str | dict | list | bool:
         # This fetch method solely focuses on get requests
         try:
             # Wrap in try except due to 0x89 png/jpg files
             # This fetch method solely focuses on get requests
-            # TODO determine if method for post requests is necessary
-            if proxy != "":
-                if params != "":
+            if proxy != '':
+                proxy = str(random.choice(cls().proxy_list))
+                if len(params) != 0:
                     sslcontext = ssl.create_default_context(cafile=certifi.where())
                     async with session.get(url, ssl=sslcontext, params=params, proxy=proxy) as response:
                         return await response.text() if json is False else await response.json()
                 else:
                     sslcontext = ssl.create_default_context(cafile=certifi.where())
                     async with session.get(url, ssl=sslcontext, proxy=proxy) as response:
-                        await asyncio.sleep(2)
+                        await asyncio.sleep(5)
                         return await response.text() if json is False else await response.json()
 
-            if params != '':
+            if len(params) != 0:
                 sslcontext = ssl.create_default_context(cafile=certifi.where())
                 async with session.get(url, ssl=sslcontext, params=params) as response:
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(5)
                     return await response.text() if json is False else await response.json()
 
             else:
                 sslcontext = ssl.create_default_context(cafile=certifi.where())
                 async with session.get(url, ssl=sslcontext) as response:
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(5)
                     return await response.text() if json is False else await response.json()
         except Exception as e:
             print(f'An exception has occurred: {e}')
             return ''
 
     @staticmethod
-    async def takeover_fetch(session, url, proxy="") -> Union[Tuple[Any, Any], str]:
+    async def takeover_fetch(session, url: str, proxy: str = '') -> tuple[Any, Any] | str:
         # This fetch method solely focuses on get requests
         try:
             # Wrap in try except due to 0x89 png/jpg files
             # This fetch method solely focuses on get requests
             # TODO determine if method for post requests is necessary
-            url = f'http://{url}' if str(url).startswith(('http:', 'https:')) is False else url
+            # url = f'http://{url}' if str(url).startswith(('http:', 'https:')) is False else url
             # Clean up urls with proper schemas
-            if proxy != "":
-                async with session.get(url, proxy=proxy) as response:
-                    await asyncio.sleep(2)
-                    return url, await response.text()
+            if proxy != '':
+                if 'https://' in url:
+                    sslcontext = ssl.create_default_context(cafile=certifi.where())
+                    async with session.get(url, proxy=proxy, ssl=sslcontext) as response:
+                        await asyncio.sleep(5)
+                        return url, await response.text()
+                else:
+                    async with session.get(url, proxy=proxy, ssl=False) as response:
+                        await asyncio.sleep(5)
+                        return url, await response.text()
             else:
-                async with session.get(url) as response:
-                    await asyncio.sleep(2)
-                    return url, await response.text()
-        except Exception:
+                if 'https://' in url:
+                    sslcontext = ssl.create_default_context(cafile=certifi.where())
+                    async with session.get(url, ssl=sslcontext) as response:
+                        await asyncio.sleep(5)
+                        return url, await response.text()
+                else:
+                    async with session.get(url, ssl=False) as response:
+                        await asyncio.sleep(5)
+                        return url, await response.text()
+        except Exception as e:
+            print(f'Takeover check error: {e}')
             return url, ''
 
     @classmethod
-    async def fetch_all(cls, urls, headers='', params='', json=False, takeover=False, proxy=False) -> tuple:
+    async def fetch_all(
+        cls,
+        urls,
+        headers=None,
+        params: Sized = '',
+        json: bool = False,
+        takeover: bool = False,
+        proxy: bool = False,
+    ) -> list:
         # By default, timeout is 5 minutes; 60 seconds should suffice
+        if headers is None:
+            headers = {}
         timeout = aiohttp.ClientTimeout(total=60)
         if len(headers) == 0:
             headers = {'User-Agent': Core.get_user_agent()}
         if takeover:
             async with aiohttp.ClientSession(headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as session:
                 if proxy:
-                    tuples = await asyncio.gather(
-                        *[AsyncFetcher.takeover_fetch(session, url, proxy=random.choice(cls().proxy_list)) for url in
-                          urls])
-                    return tuples
+                    return await asyncio.gather(
+                        *[AsyncFetcher.takeover_fetch(session, url, proxy=random.choice(cls().proxy_list)) for url in urls]
+                    )
                 else:
-                    tuples = await asyncio.gather(*[AsyncFetcher.takeover_fetch(session, url) for url in urls])
-                    return tuples
+                    return await asyncio.gather(*[AsyncFetcher.takeover_fetch(session, url) for url in urls])
 
         if len(params) == 0:
-            async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
+            async with aiohttp.ClientSession(headers=headers, timeout=timeout, max_field_size=13000) as session:
                 if proxy:
-                    texts = await asyncio.gather(
-                        *[AsyncFetcher.fetch(session, url, json=json, proxy=random.choice(cls().proxy_list)) for url in
-                          urls])
-                    return texts
+                    return await asyncio.gather(
+                        *[
+                            AsyncFetcher.fetch(
+                                session,
+                                url,
+                                json=json,
+                                proxy=random.choice(cls().proxy_list),
+                            )
+                            for url in urls
+                        ]
+                    )
                 else:
-                    texts = await asyncio.gather(*[AsyncFetcher.fetch(session, url, json=json) for url in urls])
-                    return texts
+                    return await asyncio.gather(*[AsyncFetcher.fetch(session, url, json=json) for url in urls])
         else:
             # Indicates the request has certain params
             async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
                 if proxy:
-                    texts = await asyncio.gather(*[AsyncFetcher.fetch(session, url, params, json,
-                                                                      proxy=random.choice(cls().proxy_list)) for url in
-                                                   urls])
-                    return texts
+                    return await asyncio.gather(
+                        *[
+                            AsyncFetcher.fetch(
+                                session,
+                                url,
+                                params,
+                                json,
+                                proxy=random.choice(cls().proxy_list),
+                            )
+                            for url in urls
+                        ]
+                    )
                 else:
-                    texts = await asyncio.gather(*[AsyncFetcher.fetch(session, url, params, json) for url in urls])
-                    return texts
+                    return await asyncio.gather(*[AsyncFetcher.fetch(session, url, params, json) for url in urls])

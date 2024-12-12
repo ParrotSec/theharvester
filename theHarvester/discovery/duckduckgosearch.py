@@ -1,27 +1,26 @@
-from theHarvester.discovery.constants import *
-from theHarvester.lib.core import *
+import ujson
+
+from theHarvester.lib.core import AsyncFetcher, Core
 from theHarvester.parsers import myparser
-import json
 
 
 class SearchDuckDuckGo:
-
-    def __init__(self, word, limit):
+    def __init__(self, word, limit) -> None:
         self.word = word
-        self.results = ""
-        self.totalresults = ""
-        self.dorks = []
-        self.links = []
+        self.results = ''
+        self.totalresults = ''
+        self.dorks: list = []
+        self.links: list = []
         self.database = 'https://duckduckgo.com/?q='
         self.api = 'https://api.duckduckgo.com/?q=x&format=json&pretty=1'  # Currently using API.
         self.quantity = '100'
         self.limit = limit
         self.proxy = False
 
-    async def do_search(self):
+    async def do_search(self) -> None:
         # Do normal scraping.
         url = self.api.replace('x', self.word)
-        headers = {'User-Agent': googleUA}
+        headers = {'User-Agent': Core.get_user_agent()}
         first_resp = await AsyncFetcher.fetch_all([url], headers=headers, proxy=self.proxy)
         self.results = first_resp[0]
         self.totalresults += self.results
@@ -38,20 +37,24 @@ class SearchDuckDuckGo:
         """
         urls = set()
         try:
-            load = json.loads(text)
+            load = ujson.loads(text)
             for keys in load.keys():  # Iterate through keys of dict.
                 val = load.get(keys)
+
                 if isinstance(val, int) or isinstance(val, dict) or val is None:
                     continue
+
                 if isinstance(val, list):
                     if len(val) == 0:  # Make sure not indexing an empty list.
                         continue
-                    val = val[0]  # First value should be dict.
-                    if isinstance(val, dict):  # Sanity check.
+                    val = val[0]  # The First value should be dict.
+
+                    if isinstance(val, dict):  # Validation check.
                         for key in val.keys():
                             value = val.get(key)
                             if isinstance(value, str) and value != '' and 'https://' in value or 'http://' in value:
                                 urls.add(value)
+
                 if isinstance(val, str) and val != '' and 'https://' in val or 'http://' in val:
                     urls.add(val)
             tmp = set()
@@ -59,7 +62,7 @@ class SearchDuckDuckGo:
                 if '<' in url and 'href=' in url:  # Format is <href="https://www.website.com"/>
                     equal_index = url.index('=')
                     true_url = ''
-                    for ch in url[equal_index + 1:]:
+                    for ch in url[equal_index + 1 :]:
                         if ch == '"':
                             tmp.add(true_url)
                             break
@@ -80,6 +83,6 @@ class SearchDuckDuckGo:
         rawres = myparser.Parser(self.totalresults, self.word)
         return await rawres.hostnames()
 
-    async def process(self, proxy=False):
+    async def process(self, proxy: bool = False) -> None:
         self.proxy = proxy
         await self.do_search()  # Only need to search once since using API.

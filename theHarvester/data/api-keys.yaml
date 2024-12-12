@@ -1,6 +1,6 @@
 apikeys:
   bevigil:
-   key:
+    key:
 
   binaryedge:
     key:
@@ -8,9 +8,15 @@ apikeys:
   bing:
     key:
 
+  bufferoverun:
+    key:
+
   censys:
     id:
     secret:
+
+  criminalip:
+    key:
 
   fullhunt:
     key:
@@ -21,7 +27,16 @@ apikeys:
   hunter:
     key:
 
+  hunterhow:
+    key:
+
   intelx:
+    key:
+
+  netlas:
+    key:
+
+  onyphe:
     key:
 
   pentestTools:
@@ -38,6 +53,10 @@ apikeys:
 
   shodan:
     key:
+
+  tomba:
+    key:
+    secret:
 
   virustotal:
     key:

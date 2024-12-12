@@ -1,6 +1,0 @@
-#!/usr/bin/env sh
-
-set -e
-
-echo -e "this command is deprecated, use theHarvester instead"
-/usr/bin/theHarvester $@

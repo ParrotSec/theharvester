@@ -1,9 +1,6 @@
-from theHarvester.lib.core import *
-from typing import Union, Optional
 import random
 
-googleUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 ' \
-           'Safari/537.36 '
+from theHarvester.lib.core import AsyncFetcher, Core
 
 
 async def splitter(links):
@@ -12,15 +9,15 @@ async def splitter(links):
     LinkedinLists pulls a lot of profiles with the same name.
     This method tries to remove duplicates from the list.
     :param links: list of links to remove duplicates from
-    :return: unique-ish list
+    :return: a unique-ish list
     """
     unique_list = []
     name_check = []
     for url in links:
-        tail = url.split("/")[-1]
-        if len(tail) == 2 or tail == "zh-cn":
-            tail = url.split("/")[-2]
-        name = tail.split("-")
+        tail = url.split('/')[-1]
+        if len(tail) == 2 or tail == 'zh-cn':
+            tail = url.split('/')[-2]
+        name = tail.split('-')
         if len(name) > 1:
             joined_name = name[0] + name[1]
         else:
@@ -52,25 +49,28 @@ def filter(lst):
 
 def get_delay() -> float:
     """Method that is used to generate a random delay"""
-    return random.randint(1, 3) - .5
+    return random.randint(1, 3) - 0.5
 
 
 async def search(text: str) -> bool:
     """Helper function to check if Google has blocked traffic.
-    :param text: See if certain text is returned which means Google is blocking us
+    :param text: See if specific text is returned, which means Google is blocking us
     :return bool:
     """
     for line in text.strip().splitlines():
-        if 'This page appears when Google automatically detects requests coming from your computer network' in line \
-                or 'http://www.google.com/sorry/index' in line or 'https://www.google.com/sorry/index' in line:
+        if (
+            'This page appears when Google automatically detects requests coming from your computer network' in line
+            or 'http://www.google.com/sorry/index' in line
+            or 'https://www.google.com/sorry/index' in line
+        ):
             # print('\tGoogle is blocking your IP due to too many automated requests, wait or change your IP')
             return True
     return False
 
 
-async def google_workaround(visit_url: str) -> Union[bool, str]:
+async def google_workaround(visit_url: str) -> bool | str:
     """
-    Function that makes a request on our behalf, if Google starts to block us
+    Function that makes a request on our behalf if Google starts to block us
     :param visit_url: Url to scrape
     :return: Correct html that can be parsed by BS4
     """
@@ -80,13 +80,16 @@ async def google_workaround(visit_url: str) -> Union[bool, str]:
         'url': visit_url,
         'submit': 'Submit',
         'type': 'GET&http=1.1',
-        'uak': str(random.randint(4, 8))  # select random UA to send to Google
+        'uak': str(random.randint(4, 8)),  # select random UA to send to Google
     }
     returned_html = await AsyncFetcher.post_fetch(url, headers={'User-Agent': Core.get_user_agent()}, data=data)
-    returned_html = "This page appears when Google automatically detects requests coming from your computer network" \
-        if returned_html == "" else returned_html[0]
+    returned_html = (
+        'This page appears when Google automatically detects requests coming from your computer network'
+        if returned_html == ''
+        else returned_html[0]
+    )
 
-    returned_html = "" if 'Please Wait... | Cloudflare' in returned_html else returned_html
+    returned_html = '' if 'Please Wait... | Cloudflare' in returned_html else returned_html
 
     if len(returned_html) == 0 or await search(returned_html) or '&lt;html' not in returned_html:
         # indicates that google is serving workaround a captcha
@@ -109,7 +112,8 @@ class MissingKey(Exception):
     """
     :raise: When there is a module that has not been provided its API key
     """
-    def __init__(self, source: Optional[str]):
+
+    def __init__(self, source: str | None) -> None:
         if source:
             self.message = f'\n\033[93m[!] Missing API key for {source}. \033[0m'
         else:

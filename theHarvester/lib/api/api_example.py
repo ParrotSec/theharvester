@@ -3,6 +3,7 @@ Example script to query theHarvester rest API, obtain results, and write out to 
 """
 
 import asyncio
+
 import aiohttp
 import netaddr
 
@@ -17,13 +18,13 @@ async def fetch(session, url):
         return await response.text()
 
 
-async def main():
+async def main() -> None:
     """
     Just a simple example of how to interact with the rest api
     you can easily use requests instead of aiohttp or whatever you best see fit
     """
-    url = "http://127.0.0.1:5000"
-    domain = "netflix.com"
+    url = 'http://127.0.0.1:5000'
+    domain = 'netflix.com'
     query_url = f'{url}/query?limit=300&source=bing,baidu,duckduckgo,dogpile&domain={domain}'
     async with aiohttp.ClientSession() as session:
         fetched_json = await fetch_json(session, query_url)
@@ -101,7 +102,7 @@ async def main():
         print('\n[*] Emails found: ' + str(len(emails)))
         print('----------------------')
         all_emails = sorted(list(set(emails)))
-        print(('\n'.join(all_emails)))
+        print('\n'.join(all_emails))
 
     if len(hosts) == 0:
         print('\n[*] No hosts found.\n\n')

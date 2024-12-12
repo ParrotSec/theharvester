@@ -1,11 +1,8 @@
-FROM ubuntu:kinetic
+FROM alpine:3
 LABEL maintainer="@jay_townsend1 & @NotoriousRebel1"
-RUN mkdir /app
-WORKDIR /app
-COPY . /app
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update && apt dist-upgrade -qy && apt install -qy git python3 python3-pip libffi-dev libxml2-dev libxslt1-dev && /usr/bin/python3 -m pip install --upgrade pip && apt autoremove -qy
-RUN /usr/bin/python3 --version && pip3 install --no-cache-dir -r requirements.txt && chmod +x ./*.py
-ENTRYPOINT ["/app/theHarvester.py"]
-ENTRYPOINT ["/app/restfulHarvest.py", "-H", "0.0.0.0", "-p", "80"]
+RUN apk update && apk upgrade --available && apk add --no-cache musl-dev git libffi-dev gcc python3-dev pipx libxml2-dev libxslt-dev bash
+RUN mkdir -p "~/.local/share/theHarvester/static/"
+RUN pipx install git+https://github.com/laramies/theHarvester.git
+RUN pipx ensurepath
+ENTRYPOINT ["/root/.local/bin/restfulHarvest", "-H", "0.0.0.0", "-p", "80"]
 EXPOSE 80

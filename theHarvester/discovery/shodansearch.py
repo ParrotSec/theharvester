@@ -1,35 +1,35 @@
-from theHarvester.discovery.constants import *
-from theHarvester.lib.core import *
-from shodan import exception
-from shodan import Shodan
 from collections import OrderedDict
+
+from shodan import Shodan, exception
+
+from theHarvester.discovery.constants import MissingKey
+from theHarvester.lib.core import Core
 
 
 class SearchShodan:
-
-    def __init__(self):
+    def __init__(self) -> None:
         self.key = Core.shodan_key()
         if self.key is None:
             raise MissingKey('Shodan')
         self.api = Shodan(self.key)
-        self.hostdatarow = []
+        self.hostdatarow: list = []
         self.tracker: OrderedDict = OrderedDict()
 
-    async def search_ip(self, ip):
+    async def search_ip(self, ip) -> OrderedDict:
         try:
             ipaddress = ip
             results = self.api.host(ipaddress)
             asn = ''
-            domains = list()
-            hostnames = list()
+            domains: list = list()
+            hostnames: list = list()
             ip_str = ''
             isp = ''
             org = ''
-            ports = list()
+            ports: list = list()
             title = ''
             server = ''
             product = ''
-            technologies = list()
+            technologies: list = list()
 
             data_first_dict = dict(results['data'][0])
 
@@ -74,10 +74,19 @@ class SearchShodan:
 
             technologies = list(set(technologies))
 
-            self.tracker[ip] = {'asn': asn.strip(), 'domains': domains, 'hostnames': hostnames,
-                                'ip_str': ip_str.strip(), 'isp': isp.strip(), 'org': org.strip(),
-                                'ports': ports, 'product': product.strip(),
-                                'server': server.strip(), 'technologies': technologies, 'title': title.strip()}
+            self.tracker[ip] = {
+                'asn': asn.strip(),
+                'domains': domains,
+                'hostnames': hostnames,
+                'ip_str': ip_str.strip(),
+                'isp': isp.strip(),
+                'org': org.strip(),
+                'ports': ports,
+                'product': product.strip(),
+                'server': server.strip(),
+                'technologies': technologies,
+                'title': title.strip(),
+            }
 
             return self.tracker
         except exception.APIError:

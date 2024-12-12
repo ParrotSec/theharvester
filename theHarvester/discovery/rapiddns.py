@@ -1,12 +1,12 @@
 from bs4 import BeautifulSoup
-from theHarvester.lib.core import *
+
+from theHarvester.lib.core import AsyncFetcher, Core
 
 
 class SearchRapidDns:
-
-    def __init__(self, word):
+    def __init__(self, word) -> None:
         self.word = word
-        self.total_results = []
+        self.total_results: list = []
         self.proxy = False
 
     async def do_search(self):
@@ -19,12 +19,12 @@ class SearchRapidDns:
             if len(responses[0]) <= 1:
                 return self.total_results
             soup = BeautifulSoup(responses[0], 'html.parser')
-            rows = soup.find("table").find("tbody").find_all("tr")
+            rows = soup.find('table').find('tbody').find_all('tr')
             if rows:
-                # Sanity check
+                # Validation check
                 for row in rows:
-                    cells = row.find_all("td")
-                    if len(cells) >= 0:
+                    cells = row.find_all('td')
+                    if len(cells) > 0:
                         # sanity check
                         subdomain = str(cells[0].get_text())
                         if cells[-1].get_text() == 'CNAME':
@@ -35,7 +35,7 @@ class SearchRapidDns:
         except Exception as e:
             print(f'An exception has occurred: {str(e)}')
 
-    async def process(self, proxy=False):
+    async def process(self, proxy: bool = False) -> None:
         self.proxy = proxy
         await self.do_search()
 
