@@ -1,8 +1,7 @@
 class Parser:
-
-    def __init__(self):
-        self.emails = set()
-        self.hosts = set()
+    def __init__(self) -> None:
+        self.emails: set = set()
+        self.hosts: set = set()
 
     async def parse_dictionaries(self, results: dict) -> tuple:
         """
@@ -11,7 +10,7 @@ class Parser:
         :return: tuple of emails and hosts
         """
         if results is not None:
-            for dictionary in results["selectors"]:
+            for dictionary in results['selectors']:
                 field = dictionary['selectorvalue']
                 if '@' in field:
                     self.emails.add(field)

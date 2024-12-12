@@ -1,12 +1,13 @@
-from theHarvester.discovery.constants import *
 import asyncio
+
+from theHarvester.discovery.constants import MissingKey, get_delay
+from theHarvester.lib.core import AsyncFetcher, Core
 
 
 class SearchBinaryEdge:
-
-    def __init__(self, word, limit):
+    def __init__(self, word, limit) -> None:
         self.word = word
-        self.totalhosts = set()
+        self.totalhosts: set = set()
         self.proxy = False
         self.key = Core.binaryedge_key()
         self.limit = 501 if limit >= 501 else limit
@@ -14,7 +15,7 @@ class SearchBinaryEdge:
         if self.key is None:
             raise MissingKey('binaryedge')
 
-    async def do_search(self):
+    async def do_search(self) -> None:
         base_url = f'https://api.binaryedge.io/v2/query/domains/subdomain/{self.word}'
         headers = {'X-KEY': self.key, 'User-Agent': Core.get_user_agent()}
         for page in range(1, self.limit):
@@ -22,8 +23,9 @@ class SearchBinaryEdge:
             response = await AsyncFetcher.fetch_all([base_url], json=True, proxy=self.proxy, params=params, headers=headers)
             responses = response[0]
             dct = responses
-            if ('status' in dct.keys() and 'message' in dct.keys()) and \
-                    (dct['status'] == 400 or 'Bad Parameter' in dct['message'] or 'Error' in dct['message']):
+            if ('status' in dct.keys() and 'message' in dct.keys()) and (
+                dct['status'] == 400 or 'Bad Parameter' in dct['message'] or 'Error' in dct['message']
+            ):
                 # 400 status code means no more results
                 break
             if 'events' in dct.keys():
@@ -35,6 +37,6 @@ class SearchBinaryEdge:
     async def get_hostnames(self) -> set:
         return self.totalhosts
 
-    async def process(self, proxy=False):
+    async def process(self, proxy: bool = False) -> None:
         self.proxy = proxy
         await self.do_search()

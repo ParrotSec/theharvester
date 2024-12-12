@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 ============
 DNS Browsing
@@ -8,48 +6,42 @@ DNS Browsing
 Explore the space around known hosts & ips for extra catches.
 """
 
+import asyncio
 import re
 import sys
+from collections.abc import Callable
+from ipaddress import IPv4Network
 
 from aiodns import DNSResolver
-from ipaddress import IPv4Network
-from typing import Callable, List, Optional
-from theHarvester.lib import hostchecker
 
+from theHarvester.lib import hostchecker
+from theHarvester.lib.core import DATA_DIR
 
 #####################################################################
 # DNS FORCE
 #####################################################################
 
+DNS_NAMES = DATA_DIR / 'wordlists' / 'dns-names.txt'
+
 
 class DnsForce:
-
-    def __init__(self, domain, dnsserver, verbose=False):
+    def __init__(self, domain, dnsserver, verbose: bool = False) -> None:
         self.domain = domain
         self.subdo = False
         self.verbose = verbose
         # self.dnsserver = [dnsserver] if isinstance(dnsserver, str) else dnsserver
-        self.dnsserver = list(map(str, dnsserver.split(','))) if isinstance(dnsserver, str) else dnsserver
-        try:
-            with open('/etc/theHarvester/wordlists/dns-names.txt', 'r') as file:
-                self.list = file.readlines()
-        except FileNotFoundError:
-            try:
-                with open('/usr/local/etc/theHarvester/wordlists/dns-names.txt', 'r') as file:
-                    self.list = file.readlines()
-            except FileNotFoundError:
-                with open('wordlists/dns-names.txt', 'r') as file:
-                    self.list = file.readlines()
+        # self.dnsserver = list(map(str, dnsserver.split(','))) if isinstance(dnsserver, str) else dnsserver
+        self.dnsserver = dnsserver
+        with DNS_NAMES.open('r') as file:
+            self.list = file.readlines()
         self.domain = domain.replace('www.', '')
         self.list = [f'{word.strip()}.{self.domain}' for word in self.list]
 
     async def run(self):
         print(f'Starting DNS brute forcing with {len(self.list)} words')
-        checker = hostchecker.Checker(
-            self.list) if self.dnsserver == [] or self.dnsserver == "" or self.dnsserver is None \
-            else hostchecker.Checker(self.list, nameserver=self.dnsserver)
-        hosts, ips = await checker.check()
-        return hosts, ips
+        checker = hostchecker.Checker(self.list, nameserver=self.dnsserver)
+        resolved_pair, hosts, ips = await checker.check()
+        return resolved_pair, hosts, ips
 
 
 #####################################################################
@@ -59,11 +51,8 @@ class DnsForce:
 
 IP_REGEX = r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}'
 PORT_REGEX = r'\d{1,5}'
-NETMASK_REGEX = r'\d{1,2}|' + IP_REGEX
-NETWORK_REGEX = r'\b({})(?:\:({}))?(?:\/({}))?\b'.format(
-    IP_REGEX,
-    PORT_REGEX,
-    NETMASK_REGEX)
+NETMASK_REGEX: str = r'\d{1,2}|' + IP_REGEX
+NETWORK_REGEX: str = rf'\b({IP_REGEX})(?:\:({PORT_REGEX}))?(?:\/({NETMASK_REGEX}))?\b'
 
 
 def serialize_ip_range(ip: str, netmask: str = '24') -> str:
@@ -89,7 +78,7 @@ def serialize_ip_range(ip: str, netmask: str = '24') -> str:
         __ip = __ip_matches.group(1)
         __netmask = netmask if netmask else __ip_matches.group(3)
         if __ip and __netmask:
-            return str(IPv4Network('{}/{}'.format(__ip, __netmask), strict=False))
+            return str(IPv4Network(f'{__ip}/{__netmask}', strict=False))
         elif __ip:
             return str(IPv4Network('{}/{}'.format(__ip, '24'), strict=False))
 
@@ -97,7 +86,7 @@ def serialize_ip_range(ip: str, netmask: str = '24') -> str:
     return ''
 
 
-def list_ips_in_network_range(iprange: str) -> List[str]:
+def list_ips_in_network_range(iprange: str) -> list[str]:
     """
     List all the IPs in the range.
 
@@ -138,7 +127,7 @@ async def reverse_single_ip(ip: str, resolver: DNSResolver) -> str:
         return ''
 
 
-async def reverse_all_ips_in_range(iprange: str, callback: Callable, nameservers: Optional[List[str]] = None) -> None:
+async def reverse_all_ips_in_range(iprange: str, callback: Callable, nameservers: list[str] | None = None) -> None:
     """
     Reverse all the IPs stored in a network range.
     All the queries are made concurrently.
@@ -158,7 +147,8 @@ async def reverse_all_ips_in_range(iprange: str, callback: Callable, nameservers
     -------
     out: None.
     """
-    __resolver = DNSResolver(timeout=4, nameservers=nameservers)
+    loop = asyncio.get_event_loop()
+    __resolver = DNSResolver(loop=loop, timeout=8, nameservers=nameservers)
     for __ip in list_ips_in_network_range(iprange):
         log_query(__ip)
         __host = await reverse_single_ip(ip=__ip, resolver=__resolver)
@@ -206,7 +196,7 @@ def log_result(host: str) -> None:
         print(host)
 
 
-def generate_postprocessing_callback(target: str, **allhosts: List[str]) -> Callable:
+def generate_postprocessing_callback(target: str, **allhosts: list[str]) -> Callable:
     """
     Postprocess the query results asynchronously too, instead of waiting for
     the querying stage to be completely finished.

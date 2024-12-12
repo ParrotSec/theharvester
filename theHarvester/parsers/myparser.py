@@ -1,22 +1,43 @@
 import re
+from collections.abc import Set
 
 
 class Parser:
-
-    def __init__(self, results, word):
+    def __init__(self, results, word) -> None:
         self.results = results
         self.word = word
-        self.temp = []
+        self.temp: list = []
 
-    async def genericClean(self):
-        self.results = self.results.replace('<em>', '').replace('<b>', '').replace('</b>', '').replace('</em>', '') \
-            .replace('%3a', '').replace('<strong>', '').replace('</strong>', '') \
-            .replace('<wbr>', '').replace('</wbr>', '')
+    async def genericClean(self) -> None:
+        self.results = (
+            self.results.replace('<em>', '')
+            .replace('<b>', '')
+            .replace('</b>', '')
+            .replace('</em>', '')
+            .replace('%3a', '')
+            .replace('<strong>', '')
+            .replace('</strong>', '')
+            .replace('<wbr>', '')
+            .replace('</wbr>', '')
+        )
 
-        for search in ('<', '>', ':', '=', ';', '&', '%3A', '%3D', '%3C', '%2f', '/', '\\'):
+        for search in (
+            '<',
+            '>',
+            ':',
+            '=',
+            ';',
+            '&',
+            '%3A',
+            '%3D',
+            '%3C',
+            '%2f',
+            '/',
+            '\\',
+        ):
             self.results = self.results.replace(search, ' ')
 
-    async def urlClean(self):
+    async def urlClean(self) -> None:
         self.results = self.results.replace('<em>', '').replace('</em>', '').replace('%2f', '').replace('%3a', '')
         for search in ('<', '>', ':', '=', ';', '&', '%3A', '%3D', '%3C'):
             self.results = self.results.replace(search, ' ')
@@ -28,13 +49,17 @@ class Parser:
         reg_emails = re.compile(r'[a-zA-Z0-9.\-_+#~!$&\',;=:]+' + '@' + '[a-zA-Z0-9.-]*' + self.word.replace('www.', ''))
         self.temp = reg_emails.findall(self.results)
         emails = await self.unique()
-        true_emails = {str(email)[1:].lower().strip() if len(str(email)) > 1 and str(email)[0] == '.'
-                       else len(str(email)) > 1 and str(email).lower().strip() for email in emails}
+        true_emails = {
+            str(email)[1:].lower().strip()
+            if len(str(email)) > 1 and str(email)[0] == '.'
+            else len(str(email)) > 1 and str(email).lower().strip()
+            for email in emails
+        }
         # if email starts with dot shift email string and make sure all emails are lowercase
         return true_emails
 
-    async def fileurls(self, file):
-        urls = []
+    async def fileurls(self, file) -> list:
+        urls: list = []
         reg_urls = re.compile('<a href="(.*?)"')
         self.temp = reg_urls.findall(self.results)
         allurls = await self.unique()
@@ -46,13 +71,18 @@ class Parser:
         return urls
 
     async def hostnames(self):
+        # should check both www. and not www.
+        hostnames = []
         await self.genericClean()
         reg_hosts = re.compile(r'[a-zA-Z0-9.-]*\.' + self.word)
-        self.temp = reg_hosts.findall(self.results)
-        hostnames = await self.unique()
+        first_hostnames = reg_hosts.findall(self.results)
+        hostnames.extend(first_hostnames)
+        # TODO determine if necessary below or if only pass through is fine
         reg_hosts = re.compile(r'[a-zA-Z0-9.-]*\.' + self.word.replace('www.', ''))
-        self.temp = reg_hosts.findall(self.results)
-        hostnames.extend(await self.unique())
+        # reg_hosts = re.compile(r'www\.[a-zA-Z0-9.-]*\.' + 'www.' + self.word)
+        # reg_hosts = re.compile(r'www\.[a-zA-Z0-9.-]*\.(?:' + 'www.' + self.word + ')?')
+        second_hostnames = reg_hosts.findall(self.results)
+        hostnames.extend(second_hostnames)
         return list(set(hostnames))
 
     async def hostnames_all(self):
@@ -77,7 +107,7 @@ class Parser:
             sets.append(delete)
         return sets
 
-    async def urls(self):
+    async def urls(self) -> Set[str]:
         found = re.finditer(r'(http|https)://(www\.)?trello.com/([a-zA-Z\d\-_\.]+/?)*', self.results)
         urls = {match.group().strip() for match in found}
         return urls

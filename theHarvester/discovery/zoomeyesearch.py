@@ -1,13 +1,13 @@
-from theHarvester.discovery.constants import *
-from theHarvester.lib.core import *
-from theHarvester.parsers import myparser
 import asyncio
 import re
 
+from theHarvester.discovery.constants import MissingKey, get_delay
+from theHarvester.lib.core import AsyncFetcher, Core
+from theHarvester.parsers import myparser
+
 
 class SearchZoomEye:
-
-    def __init__(self, word, limit):
+    def __init__(self, word, limit) -> None:
         self.word = word
         self.limit = limit
         self.key = Core.zoomeye_key()
@@ -19,15 +19,15 @@ class SearchZoomEye:
             raise MissingKey('zoomeye')
         self.baseurl = 'https://api.zoomeye.org/host/search'
         self.proxy = False
-        self.totalasns = list()
-        self.totalhosts = list()
-        self.interestingurls = list()
-        self.totalips = list()
-        self.totalemails = list()
+        self.totalasns: list = list()
+        self.totalhosts: list = list()
+        self.interestingurls: list = list()
+        self.totalips: list = list()
+        self.totalemails: list = list()
         # Regex used is directly from: https://github.com/GerbenJavado/LinkFinder/blob/master/linkfinder.py#L29
         # Maybe one day it will be a pip package
         # Regardless LinkFinder is an amazing tool!
-        self.iurl_regex = r"""
+        regex_str = r"""
           (?:"|')                               # Start newline delimiter
           (
             ((?:[a-zA-Z]{1,10}://|//)           # Match a scheme [a-Z]*1-10 or //
@@ -54,19 +54,20 @@ class SearchZoomEye:
           )
           (?:"|')                               # End newline delimiter
         """
-        self.iurl_regex = re.compile(self.iurl_regex, re.VERBOSE)
+        self.iurl_regex = re.compile(regex_str, re.VERBOSE)
 
-    async def fetch_subdomains(self):
+    async def fetch_subdomains(self) -> None:
         # Based on docs from: https://www.zoomeye.org/doc#search-sub-domain-ip
-        headers = {
-            'API-KEY': self.key,
-            'User-Agent': Core.get_user_agent()
-        }
+        headers = {'API-KEY': self.key, 'User-Agent': Core.get_user_agent()}
 
         subdomain_search_endpoint = f'https://api.zoomeye.org/domain/search?q={self.word}&type=0&'
 
-        response = await AsyncFetcher.fetch_all([subdomain_search_endpoint + 'page=1'],
-                                                json=True, proxy=self.proxy, headers=headers)
+        response = await AsyncFetcher.fetch_all(
+            [subdomain_search_endpoint + 'page=1'],
+            json=True,
+            proxy=self.proxy,
+            headers=headers,
+        )
         # Make initial request to determine total number of subdomains
         resp = response[0]
         if resp['status'] != 200:
@@ -77,40 +78,40 @@ class SearchZoomEye:
         # Change the line below to:
         # self.limit = (total // 30) + 1
         self.limit = self.limit if total > self.limit else (total // 30) + 1
-        self.totalhosts.extend([item["name"] for item in resp["list"]])
+        self.totalhosts.extend([item['name'] for item in resp['list']])
         for i in range(2, self.limit):
-            response = await AsyncFetcher.fetch_all([subdomain_search_endpoint + f'page={i}'],
-                                                    json=True, proxy=self.proxy, headers=headers)
+            response = await AsyncFetcher.fetch_all(
+                [subdomain_search_endpoint + f'page={i}'],
+                json=True,
+                proxy=self.proxy,
+                headers=headers,
+            )
             resp = response[0]
             if resp['status'] != 200:
                 return
-            found_subdomains = [item["name"] for item in resp["list"]]
+            found_subdomains = [item['name'] for item in resp['list']]
             if len(found_subdomains) == 0:
                 break
             self.totalhosts.extend(found_subdomains)
             if i % 10 == 0:
                 await asyncio.sleep(get_delay() + 1)
 
-    async def do_search(self):
-        headers = {
-            'API-KEY': self.key,
-            'User-Agent': Core.get_user_agent()
-        }
+    async def do_search(self) -> None:
+        headers = {'API-KEY': self.key, 'User-Agent': Core.get_user_agent()}
         # Fetch subdomains first
         await self.fetch_subdomains()
         params = (
             ('query', f'site:{self.word}'),
             ('page', '1'),
         )
-        response = await AsyncFetcher.fetch_all([self.baseurl], json=True, proxy=self.proxy, headers=headers,
-                                                params=params)
-        # First request determines how many pages there in total
+        response = await AsyncFetcher.fetch_all([self.baseurl], json=True, proxy=self.proxy, headers=headers, params=params)
+        # The First request determines how many pages there in total
         resp = response[0]
         total_pages = int(resp['available'])
         self.limit = self.limit if total_pages > self.limit else total_pages
         self.limit = 3 if self.limit == 2 else self.limit
         cur_page = 2 if self.limit >= 2 else -1
-        # Means there is only one page
+        # Means there is only one-page
         # hostnames, emails, ips, asns, iurls
         nomatches_counter = 0
         # cur_page = -1
@@ -139,8 +140,13 @@ class SearchZoomEye:
                     ('query', f'site:{self.word}'),
                     ('page', f'{num}'),
                 )
-                response = await AsyncFetcher.fetch_all([self.baseurl], json=True, proxy=self.proxy, headers=headers,
-                                                        params=params)
+                response = await AsyncFetcher.fetch_all(
+                    [self.baseurl],
+                    json=True,
+                    proxy=self.proxy,
+                    headers=headers,
+                    params=params,
+                )
                 resp = response[0]
                 if 'matches' not in resp.keys():
                     print(f'Your resp: {resp}')
@@ -149,8 +155,7 @@ class SearchZoomEye:
 
                 hostnames, emails, ips, asns, iurls = await self.parse_matches(resp['matches'])
 
-                if len(hostnames) == 0 and len(emails) == 0 and len(ips) == 0 \
-                        and len(asns) == 0 and len(iurls) == 0:
+                if len(hostnames) == 0 and len(emails) == 0 and len(ips) == 0 and len(asns) == 0 and len(iurls) == 0:
                     nomatches_counter += 1
 
                 if nomatches_counter >= 5:
@@ -178,7 +183,7 @@ class SearchZoomEye:
                 ips.add(match['ip'])
 
                 if 'geoinfo' in match.keys():
-                    asns.add(int(match['geoinfo']['asn']))
+                    asns.add(f"AS{match['geoinfo']['asn']}")
 
                 if 'rdns_new' in match.keys():
                     rdns_new = match['rdns_new']
@@ -204,14 +209,16 @@ class SearchZoomEye:
                     temp_emails = set(await self.parse_emails(match['portinfo']['banner']))
                     emails.update(temp_emails)
                     hostnames.update(set(await self.parse_hostnames(match['portinfo']['banner'])))
-                    iurls = {str(iurl.group(1)).replace('"', '') for iurl
-                             in re.finditer(self.iurl_regex, match['portinfo']['banner'])
-                             if self.word in str(iurl.group(1))}
+                    iurls = {
+                        str(iurl.group(1)).replace('"', '')
+                        for iurl in re.finditer(self.iurl_regex, match['portinfo']['banner'])
+                        if self.word in str(iurl.group(1))
+                    }
             except Exception as e:
                 print(f'An exception has occurred: {e}')
         return hostnames, emails, ips, asns, iurls
 
-    async def process(self, proxy=False):
+    async def process(self, proxy: bool = False) -> None:
         self.proxy = proxy
         await self.do_search()  # Only need to do it once.
 
