@@ -1,3 +1,9 @@
+theharvester (4.6.0-0parrot1) lory-updates; urgency=medium
+
+  * New upstream version 4.6.0
+
+ -- Dario "danterolle" Camonita <danterolle@parrotsec.org>  Thu, 12 Dec 2024 10:58:45 +0100
+
 theharvester (4.2.0-0parrot3) parrot-updates; urgency=medium
 
   * Update package dependencies.
