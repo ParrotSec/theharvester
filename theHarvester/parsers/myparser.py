@@ -50,9 +50,11 @@ class Parser:
         self.temp = reg_emails.findall(self.results)
         emails = await self.unique()
         true_emails = {
-            str(email)[1:].lower().strip()
-            if len(str(email)) > 1 and str(email)[0] == '.'
-            else len(str(email)) > 1 and str(email).lower().strip()
+            (
+                str(email)[1:].lower().strip()
+                if len(str(email)) > 1 and str(email)[0] == '.'
+                else len(str(email)) > 1 and str(email).lower().strip()
+            )
             for email in emails
         }
         # if email starts with dot shift email string and make sure all emails are lowercase
