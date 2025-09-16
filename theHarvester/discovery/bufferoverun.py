@@ -25,9 +25,11 @@ class SearchBufferover:
         dct = response[0]
         if dct['Results']:
             self.totalhosts = {
-                host.split(',')
-                if ',' in host and self.word.replace('www.', '') in host.split(',')[0] in host
-                else host.split(',')[4]
+                (
+                    host.split(',')
+                    if ',' in host and self.word.replace('www.', '') in host.split(',')[0] in host
+                    else host.split(',')[4]
+                )
                 for host in dct['Results']
             }
 

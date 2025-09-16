@@ -5,20 +5,17 @@
 
 What is this?
 -------------
-theHarvester is a simple to use, yet powerful tool designed to be used during the reconnaissance stage of a red<br>
-team assessment or penetration test. It performs open source intelligence (OSINT) gathering to help determine<br>
-a domain's external threat landscape. The tool gathers names, emails, IPs, subdomains, and URLs by using<br>
-multiple public resources that include:<br>
+theHarvester is a simple to use, yet powerful tool designed to be used during the reconnaissance stage of a red
+team assessment or penetration test. It performs open source intelligence (OSINT) gathering to help determine
+a domain's external threat landscape. The tool gathers names, emails, IPs, subdomains, and URLs by using
+multiple public resources that include:
 
 Passive modules:
 ----------------
-* anubis: Anubis-DB - https://github.com/jonluca/anubis
-
-* bevigil: CloudSEK BeVigil scans mobile application for OSINT assets (Requires an API key, see below.) - https://bevigil.com/osint-api
 
 * baidu: Baidu search engine - www.baidu.com
 
-* binaryedge: List of known subdomains (Requires an API key, see below.) - https://www.binaryedge.io
+* bevigil: CloudSEK BeVigil scans mobile application for OSINT assets (Requires an API key, see below.) - https://bevigil.com/osint-api
 
 * bing: Microsoft search engine - https://www.bing.com
 
@@ -26,7 +23,9 @@ Passive modules:
 
 * brave: Brave search engine - https://search.brave.com/
 
-* bufferoverun: (Requires an API key, see below.) https://tls.bufferover.run
+* bufferoverun: Fast domain name lookups for TLS certificates in IPv4 space (Requires an API key, see below.) https://tls.bufferover.run
+
+* builtwith: Find out what websites are built with (Requires an API key, see below.) - https://builtwith.com
 
 * censys: [Censys search engine](https://search.censys.io/) will use certificates searches to enumerate subdomains and gather emails<br>
   (Requires an API key, see below.) https://censys.io
@@ -37,7 +36,9 @@ Passive modules:
 
 * crtsh: Comodo Certificate search - https://crt.sh
 
-* dnsdumpster: DNSdumpster search engine - https://dnsdumpster.com
+* dehashed: Take your data security to the next level (Requires an API key, see below.) - https://dehashed.com
+
+* dnsdumpster: Domain research tool that can discover hosts related to a domain - https://dnsdumpster.com
 
 * duckduckgo: DuckDuckGo search engine - https://duckduckgo.com
 
@@ -47,11 +48,15 @@ Passive modules:
 
 * hackertarget: Online vulnerability scanners and network intelligence to help organizations - https://hackertarget.com
 
+* haveibeenpwned: Check if your email address is in a data breach (Requires an API key, see below.) - https://haveibeenpwned.com
+
 * hunter: Hunter search engine (Requires an API key, see below.) - https://hunter.io
 
 * hunterhow: Internet search engines for security researchers (Requires an API key, see below.) - https://hunter.how
 
 * intelx: Intelx search engine (Requires an API key, see below.) - http://intelx.io
+
+* leaklookup: Data breach search engine (Requires an API key, see below.) - https://leak-lookup.com
 
 * netlas: A Shodan or Censys competitor (Requires an API key, see below.) - https://app.netlas.io
 
@@ -59,22 +64,21 @@ Passive modules:
 
 * otx: AlienVault open threat exchange - https://otx.alienvault.com
 
-* pentestTools: Cloud-based toolkit for offensive security testing, focused on web applications and network penetration<br>
-  testing (Requires an API key, see below.) - https://pentest-tools.com/
+* pentestTools: Cloud-based toolkit for offensive security testing, focused on web applications and network penetration testing<br>
+(Requires an API key, see below.) - https://pentest-tools.com/
 
-* projecDiscovery: We actively collect and maintain internet-wide assets data, to enhance research and analyse changes around<br>
-  DNS for better insights (Requires an API key, see below.) - https://chaos.projectdiscovery.io
+* projecDiscovery: We actively collect and maintain internet-wide assets data, to enhance research and analyse changes around DNS<br>
+for better insights (Requires an API key, see below.) - https://chaos.projectdiscovery.io
 
 * rapiddns: DNS query tool which make querying subdomains or sites of a same IP easy! https://rapiddns.io
 
-* rocketreach: Access real-time verified personal/professional emails, phone numbers, and social media links (Requires an API key,<br>
-  see below.) - https://rocketreach.co
+* rocketreach: Access real-time verified personal/professional emails, phone numbers, and social media links (Requires an API key, see below.) - https://rocketreach.co
 
-* securityTrails: Security Trails search engine, the world's largest repository of historical DNS data (Requires an API key, see<br>
-  below.) - https://securitytrails.com
+* securityscorecard: helps TPRM and SOC teams detect, prioritize, and remediate vendor risk across their entire supplier ecosystem at scale (Requires an API key, see below.) - https://securityscorecard.com
 
-* -s, --shodan: Shodan search engine will search for ports and banners from discovered hosts (Requires an API key, see below.)<br>
-  https://shodan.io
+* securityTrails: Security Trails search engine, the world's largest repository of historical DNS data (Requires an API key, see below.) - https://securitytrails.com
+
+* -s, --shodan: Shodan search engine will search for ports and banners from discovered hosts (Requires an API key, see below.) - https://shodan.io
 
 * sitedossier: Find available information on a site - http://www.sitedossier.com
 
@@ -88,14 +92,17 @@ Passive modules:
 
 * urlscan: A sandbox for the web that is a URL and website scanner - https://urlscan.io
 
+* venacus: Venacus search engine (Requires an API key, see below.) - https://venacus.com
+
 * vhost: Bing virtual hosts search
 
 * virustotal: Domain search (Requires an API key, see below.) - https://www.virustotal.com
 
+* whoisxml: Subdomain search (Requires an API key, see below.) - https://subdomains.whoisxmlapi.com/api/pricing
+
 * yahoo: Yahoo search engine
 
 * zoomeye: China's version of Shodan (Requires an API key, see below.) - https://www.zoomeye.org
-
 
 Active modules:
 ---------------
@@ -107,31 +114,36 @@ Modules that require an API key:
 Documentation to setup API keys can be found at - https://github.com/laramies/theHarvester/wiki/Installation#api-keys
 
 * bevigil - Free upto 50 queries. Pricing can be found here: https://bevigil.com/pricing/osint
-* binaryedge - $10/month
 * bing
-* bufferoverun - uses the free API
+* bufferoverun - uses the free binaAPI
+* builtwith
 * censys - API keys are required and can be retrieved from your [Censys account](https://search.censys.io/account/api).
 * criminalip
+* dehashed
 * fullhunt
-* github
+* github-code
+* haveibeenpwned
 * hunter - limited to 10 on the free plan, so you will need to do -l 10 switch
 * hunterhow
 * intelx
+* leaklookup
 * netlas - $
 * onyphe -$
 * pentestTools - $
 * projecDiscovery - invite only for now
 * rocketreach - $
+* securityscorecard
 * securityTrails
 * shodan - $
 * tomba - Free up to 50 search.
+* venacus - $
+* whoisxml
 * zoomeye
 
 Install and dependencies:
 -------------------------
-* Python 3.9+
+* Python 3.11+
 * https://github.com/laramies/theHarvester/wiki/Installation
-
 
 Comments, bugs, and requests:
 -----------------------------
@@ -139,7 +151,6 @@ Comments, bugs, and requests:
   cmartorella@edge-security.com
 * [![Twitter Follow](https://img.shields.io/twitter/follow/NotoriousRebel1.svg?style=social&label=Follow)](https://twitter.com/NotoriousRebel1) Matthew Brown @NotoriousRebel1
 * [![Twitter Follow](https://img.shields.io/twitter/follow/jay_townsend1.svg?style=social&label=Follow)](https://twitter.com/jay_townsend1) Jay "L1ghtn1ng" Townsend @jay_townsend1
-
 
 Main contributors:
 ------------------

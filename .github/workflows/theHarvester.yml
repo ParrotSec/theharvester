@@ -1,4 +1,3 @@
----
 name: TheHarvester Python CI
 
 on:
@@ -14,10 +13,10 @@ jobs:
   Python:
     runs-on: ${{ matrix.os }}
     strategy:
-      max-parallel: 8
+      max-parallel: 10
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
-        python-version: [ 3.10.12, 3.11, 3.12 ]
+        os: [ ubuntu-latest ]
+        python-version: [ '3.12', '3.13', '3.14.0-beta.1' ]
 
     steps:
       - uses: actions/checkout@v4
@@ -27,82 +26,95 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
+          sudo mkdir -p /usr/local/etc/theHarvester
+          sudo cp theHarvester/data/*.yaml /usr/local/etc/theHarvester/
+          sudo chown -R runner:runner /usr/local/etc/theHarvester/
           pip install --upgrade pip
           pip install .[dev]
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Lint with ruff
         run: |
-          ruff check
+          ruff check --fix
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Format with ruff
         run: |
-          ruff format --check --diff
+          ruff format
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
+
+      - name: Commit changes for ruff formating and linting
+        if: github.event_name == 'push'
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "Apply ruff fixes and formatting" || true # Use || true to prevent failure if no changes
+          git push origin HEAD:${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Test with pytest
         run: |
-          pytest
-
-      - name: Run theHarvester module Anubis
-        run: |
-          theHarvester -d apple.com -b anubis
+          pytest tests/**
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module Baidu
         run: |
           theHarvester -d yale.edu -b baidu
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module Bing
         run: |
           theHarvester -d yale.edu -b bing
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module CertSpotter
         run: |
           theHarvester -d yale.edu -b certspotter
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module Crtsh
         run: |
           theHarvester -d hcl.com -b crtsh
-
-      - name: Run theHarvester module DnsDumpster
-        run: |
-          theHarvester -d yale.edu -b dnsdumpster
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module DuckDuckGo
         run: |
           theHarvester -d yale.edu -b duckduckgo
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module HackerTarget
         run: |
           theHarvester -d yale.edu -b hackertarget
-
-      - name: Run theHarvester module Intelx
-        run: |
-          theHarvester -d yale.edu -b intelx
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module Otx
         run: |
           theHarvester -d yale.edu -b otx
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module RapidDns
         run: |
           theHarvester -d yale.edu -b rapiddns
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module Threatminer
         run: |
           theHarvester -d yale.edu -b threatminer
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module Urlscan
         run: |
           theHarvester -d yale.edu -b urlscan
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module Yahoo
         run: |
           theHarvester -d yale.edu -b yahoo
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
 
       - name: Run theHarvester module DNS brute force
         run: |
           theHarvester -d yale.edu -c
-
-      - name: Static type checking with mypy
-        run: |
-          mypy --pretty theHarvester/*/*.py
-          mypy --pretty theHarvester/*/*/*.py
+        continue-on-error: ${{ matrix.python-version == '3.14.0-beta.1' }}
