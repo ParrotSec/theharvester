@@ -1,3 +1,10 @@
+theharvester (4.10.1-0parrot1) echo; urgency=medium
+
+  * Import new upstream release.
+  * update dependencies
+
+ -- Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>  Thu, 11 Jun 2026 13:26:06 +0200
+
 theharvester (4.6.0-0parrot1) lory-updates; urgency=medium
 
   * New upstream version 4.6.0

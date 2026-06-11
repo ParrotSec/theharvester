@@ -38,18 +38,18 @@ class SearchVirustotal:
             send_url = base_url + '&cursor=' + cursor if cursor != '' and len(cursor) > 2 else base_url
             responses = await AsyncFetcher.fetch_all([send_url], headers=headers, proxy=self.proxy, json=True)
             jdata = responses[0]
-            if 'data' not in jdata.keys():
+            if 'data' not in jdata:
                 await asyncio.sleep(60 + 5)
                 fail_counter += 1
-            if 'meta' in jdata.keys():
-                cursor = jdata['meta']['cursor'] if 'cursor' in jdata['meta'].keys() else ''
-                if len(cursor) == 0 and 'data' in jdata.keys():
+            if 'meta' in jdata:
+                cursor = jdata['meta']['cursor'] if 'cursor' in jdata['meta'] else ''
+                if len(cursor) == 0 and 'data' in jdata:
                     # if cursor no longer is within the meta field have hit last entry
                     breakcon = True
             count += jdata['meta']['count']
             if count == 0 or fail_counter >= 2:
                 break
-            if 'data' in jdata.keys():
+            if 'data' in jdata:
                 data = jdata['data']
                 self.hostnames.extend(await self.parse_hostnames(data, self.word))
                 counter += 1
@@ -65,7 +65,7 @@ class SearchVirustotal:
 
     @staticmethod
     async def parse_hostnames(data, word):
-        total_subdomains = set()
+        total_subdomains: set[str] = set()
         for attribute in data:
             total_subdomains.add(attribute['id'].replace('"', '').replace('www.', ''))
             attributes = attribute['attributes']
@@ -76,7 +76,7 @@ class SearchVirustotal:
                     if word in value['value']
                 }
             )
-            if 'last_https_certificate' in attributes.keys():
+            if 'last_https_certificate' in attributes:
                 total_subdomains.update(
                     {
                         value.replace('"', '').replace('www.', '')
@@ -84,17 +84,18 @@ class SearchVirustotal:
                         if word in value
                     }
                 )
-        total_subdomains = list(sorted(total_subdomains))
+        # Convert to list for further processing without changing variable type mid-function
+        subdomains_list: list[str] = list(sorted(total_subdomains))
         # Other false positives may occur over time and yes there are other ways to parse this, feel free to implement
         # them and submit a PR or raise an issue if you run into this filtering not being enough
         # TODO determine if parsing 'v=spf1 include:_spf-x.acme.com include:_spf-x.acme.com' is worth parsing
-        total_subdomains = [
+        subdomains_list = [
             x
-            for x in total_subdomains
+            for x in subdomains_list
             if 'edgekey.net' not in str(x) and 'akadns.net' not in str(x) and 'include:_spf' not in str(x)
         ]
-        total_subdomains.sort()
-        return total_subdomains
+        subdomains_list.sort()
+        return subdomains_list
 
     async def process(self, proxy: bool = False) -> None:
         self.proxy = proxy

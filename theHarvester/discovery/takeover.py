@@ -14,7 +14,7 @@ class TakeOver:
         self.proxy = False
         self.fingerprints: dict[str, str] = dict()
         # https://stackoverflow.com/questions/33080869/python-how-to-create-a-dict-of-dict-of-list-with-defaultdict
-        self.results: defaultdict[str, list] = defaultdict()
+        self.results: defaultdict[str, list] = defaultdict(list)
 
     async def populate_fingerprints(self):
         # Thank you to https://github.com/EdOverflow/can-i-take-over-xyz for these fingerprints
@@ -87,8 +87,16 @@ class TakeOver:
                     await self.check(url, resp)
             else:
                 return
+        except IndexError:
+            print('Response was empty — possible network error or invalid URL.')
+        except ujson.JSONDecodeError:
+            print('Failed to parse JSON — cert fingerprints might be unavailable.')
+        except KeyError as ke:
+            print(f'Missing expected field in fingerprint: {ke}')
+        except TypeError as te:
+            print(f'Invalid response structure: {te}')
         except Exception as e:
-            print(e)
+            print(f'Unexpected error: {e}')
 
     async def process(self, proxy: bool = False) -> None:
         self.proxy = proxy

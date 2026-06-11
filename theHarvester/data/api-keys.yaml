@@ -3,7 +3,10 @@ apikeys:
   bevigil:
     key:
 
-  bing:
+  bitbucket:
+    key:
+
+  brave:
     key:
 
   bufferoverun:
@@ -25,10 +28,17 @@ apikeys:
   dnsdumpster:
     key:
 
+  fofa:
+    key:
+    email:
+
   fullhunt:
     key:
 
   github:
+    key:
+
+  hackertarget:
     key:
 
   haveibeenpwned:
@@ -41,6 +51,9 @@ apikeys:
     key:
 
   intelx:
+    key:
+
+  leakix:
     key:
 
   leaklookup:
@@ -81,6 +94,9 @@ apikeys:
     key:
 
   whoisxml:
+    key:
+
+  windvane:
     key:
 
   zoomeye:

@@ -108,7 +108,7 @@ async def google_workaround(visit_url: str) -> bool | str:
     return correct_html
 
 
-class MissingKey(Exception):
+class MissingKeyError(Exception):
     """
     :raise: When there is a module that has not been provided its API key
     """
@@ -121,3 +121,7 @@ class MissingKey(Exception):
 
     def __str__(self) -> str:
         return self.message
+
+
+# Backward compatibility: keep old name for external imports
+MissingKey = MissingKeyError

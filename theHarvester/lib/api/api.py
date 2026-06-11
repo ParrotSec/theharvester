@@ -1,6 +1,7 @@
 import argparse
 import os
 import traceback
+from typing import Any, cast
 
 from fastapi import FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,8 @@ from starlette.staticfiles import StaticFiles
 
 from theHarvester import __main__
 from theHarvester.lib.api.additional_endpoints import router as additional_router
+
+API_RATE_LIMIT = os.getenv('API_RATE_LIMIT', '5/minute')
 
 
 # Define Pydantic models for request and response validation
@@ -47,10 +50,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # ty
 
 # Add CORS middleware
 app.add_middleware(
-    CORSMiddleware,
+    cast('Any', CORSMiddleware),
     allow_origins=['*'],
-    allow_credentials=True,
-    allow_methods=['*'],
+    allow_credentials=False,
+    allow_methods=['GET', 'POST'],
     allow_headers=['*'],
 )
 
@@ -155,13 +158,13 @@ class SourcesResponse(BaseModel):
         status.HTTP_429_TOO_MANY_REQUESTS: {'model': ErrorResponse},
     },
 )
-@limiter.limit('5/minute')
+@limiter.limit(API_RATE_LIMIT)
 async def getsources(request: Request) -> Response:
     """
     Endpoint to query for available sources theHarvester supports.
 
     Returns a list of all supported data sources that can be used with the query endpoint.
-    Rate limit of 5 requests per minute.
+    Rate limit is configurable via CLI argument (default: 5 requests per minute).
     """
     try:
         sources = __main__.Core.get_supportedengines()
@@ -171,12 +174,10 @@ async def getsources(request: Request) -> Response:
         error_traceback = traceback.format_exc()
         print(f'Error in getsources endpoint: {e!s}\n{error_traceback}')
 
-        # Return a detailed error response
         return UJSONResponse(
             {
-                'detail': f'An error occurred while retrieving sources: {e!s}',
+                'detail': 'An error occurred while retrieving sources',
                 'error_type': type(e).__name__,
-                'traceback': error_traceback if os.getenv('DEBUG') == '1' else None,
             },
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
@@ -196,7 +197,7 @@ class DnsBruteResponse(BaseModel):
         status.HTTP_429_TOO_MANY_REQUESTS: {'model': ErrorResponse},
     },
 )
-@limiter.limit('5/minute')
+@limiter.limit(API_RATE_LIMIT)
 async def dnsbrute(
     request: Request,
     user_agent: str = Header(None),
@@ -207,7 +208,7 @@ async def dnsbrute(
     Endpoint for DNS brute forcing.
 
     This endpoint performs DNS brute force on the specified domain and returns the results.
-    Rate limit of 5 requests per minute.
+    Rate limit is configurable via CLI argument (default: 5 requests per minute).
     """
     # Basic user agent filtering
     if user_agent and ('gobuster' in user_agent or 'sqlmap' in user_agent or 'rustbuster' in user_agent):
@@ -235,7 +236,6 @@ async def dnsbrute(
                 source=','.join([]),
                 start=0,
                 take_over=False,
-                virtual_host=False,
                 wordlist='',
                 api_scan=False,
                 dns_resolve=dns_resolve,
@@ -252,12 +252,10 @@ async def dnsbrute(
         error_traceback = traceback.format_exc()
         print(f'Error in dnsbrute endpoint: {e!s}\n{error_traceback}')
 
-        # Return a detailed error response
         return UJSONResponse(
             {
-                'detail': f'An error occurred while processing your request: {e!s}',
+                'detail': 'An error occurred while processing your request',
                 'error_type': type(e).__name__,
-                'traceback': error_traceback if os.getenv('DEBUG') == '1' else None,
             },
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
@@ -272,7 +270,7 @@ async def dnsbrute(
         status.HTTP_429_TOO_MANY_REQUESTS: {'model': ErrorResponse},
     },
 )
-@limiter.limit('5/minute')  # Increased rate limit
+@limiter.limit(API_RATE_LIMIT)
 async def query(
     request: Request,
     dns_server: str = Query('', description='DNS server to use for lookup'),
@@ -284,7 +282,6 @@ async def query(
     proxies: bool = Query(False, description='Use proxies for requests'),
     shodan: bool = Query(False, description='Use Shodan to query discovered hosts'),
     take_over: bool = Query(False, description='Check for takeovers'),
-    virtual_host: bool = Query(False, description='Verify host name via DNS resolution and search for virtual hosts'),
     wordlist: str = Query('', description='Specify a wordlist for API endpoint scanning'),
     api_scan: bool = Query(False, description='Scan for API endpoints'),
     source: list[str] = Query(..., description='Data sources to query (comma separated with no space)'),
@@ -296,7 +293,7 @@ async def query(
     Query function that allows user to query theHarvester rest API.
 
     This endpoint performs searches using the specified data sources and returns the results.
-    Rate limit of 5 requests per minute.
+    Rate limit is configurable via CLI argument (default: 5 requests per minute).
     """
     # Basic user agent filtering
     if user_agent and ('gobuster' in user_agent or 'sqlmap' in user_agent or 'rustbuster' in user_agent):
@@ -337,7 +334,6 @@ async def query(
                 source=','.join(source),
                 start=start,
                 take_over=take_over,
-                virtual_host=virtual_host,
                 wordlist=wordlist,
                 api_scan=api_scan,
                 dns_resolve=dns_resolve,
@@ -368,12 +364,10 @@ async def query(
         error_traceback = traceback.format_exc()
         print(f'Error in query endpoint: {e!s}\n{error_traceback}')
 
-        # Return a detailed error response
         return UJSONResponse(
             {
-                'detail': f'An error occurred while processing your request: {e!s}',
+                'detail': 'An error occurred while processing your request',
                 'error_type': type(e).__name__,
-                'traceback': error_traceback if os.getenv('DEBUG') == '1' else None,
             },
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
