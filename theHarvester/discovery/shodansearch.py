@@ -19,6 +19,10 @@ class SearchShodan:
         try:
             ipaddress = ip
             results = self.api.host(ipaddress)
+
+            if not results or 'data' not in results or not results['data']:
+                print(f'Shodan: No data found for IP {ip}')
+                return OrderedDict()
             asn = ''
             domains: list = list()
             hostnames: list = list()
@@ -33,44 +37,56 @@ class SearchShodan:
 
             data_first_dict = dict(results['data'][0])
 
-            if 'ip_str' in data_first_dict.keys():
+            if 'ip_str' in data_first_dict:
                 ip_str += data_first_dict['ip_str']
 
-            if 'http' in data_first_dict.keys():
+            if 'http' in data_first_dict:
                 http_results_dict = dict(data_first_dict['http'])
-                if 'title' in http_results_dict.keys():
+                if 'title' in http_results_dict:
                     title_val = str(http_results_dict['title']).strip()
                     if title_val != 'None':
                         title += title_val
-                if 'components' in http_results_dict.keys():
+                if 'components' in http_results_dict:
                     for key in http_results_dict['components'].keys():
                         technologies.append(key)
-                if 'server' in http_results_dict.keys():
+                if 'server' in http_results_dict:
                     server_val = str(http_results_dict['server']).strip()
                     if server_val != 'None':
                         server += server_val
 
             for key, value in results.items():
                 if key == 'asn':
-                    asn += value
+                    if isinstance(value, str):
+                        asn += value
+                    elif value is not None:
+                        asn += str(value)
                 if key == 'domains':
-                    value = list(value)
-                    value.sort()
-                    domains.extend(value)
+                    if isinstance(value, list):
+                        domain_values = [str(domain) for domain in value]
+                        domain_values.sort()
+                        domains.extend(domain_values)
                 if key == 'hostnames':
-                    value = [host.strip() for host in list(value)]
-                    value.sort()
-                    hostnames.extend(value)
+                    if isinstance(value, list):
+                        hostname_values = [str(host).strip() for host in value]
+                        hostname_values.sort()
+                        hostnames.extend(hostname_values)
                 if key == 'isp':
-                    isp += value
+                    if isinstance(value, str):
+                        isp += value
+                    elif value is not None:
+                        isp += str(value)
                 if key == 'org':
                     org += str(value)
                 if key == 'ports':
-                    value = list(value)
-                    value.sort()
-                    ports.extend(value)
+                    if isinstance(value, list):
+                        port_values = [int(port) for port in value if isinstance(port, int)]
+                        port_values.sort()
+                        ports.extend(port_values)
                 if key == 'product':
-                    product += value
+                    if isinstance(value, str):
+                        product += value
+                    elif isinstance(value, list):
+                        product += ', '.join(str(item) for item in value if item is not None)
 
             technologies = list(set(technologies))
 
@@ -95,5 +111,5 @@ class SearchShodan:
         except Exception as e:
             # print(f'Error occurred in the Shodan IP search module: {e}')
             self.tracker[ip] = f'Error occurred in the Shodan IP search module: {e}'
-        finally:
-            return self.tracker
+
+        return self.tracker

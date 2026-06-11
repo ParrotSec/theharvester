@@ -37,7 +37,7 @@ class SearchOnyphe:
             self.response = self.response[0]
         if not isinstance(self.response, dict):
             raise Exception(f'An exception has occurred {self.response} is not a dict')
-        if 'Success' == self.response['text']:
+        if self.response['text'] == 'Success':
             if 'results' in self.response.keys():
                 for result in self.response['results']:
                     try:
@@ -77,8 +77,7 @@ class SearchOnyphe:
                                     self.totalhosts.update(
                                         {domain for domain in result[subdomain_key] if domain.endswith(self.word)}
                                     )
-                    except Exception as e:
-                        print(f'An exception has occurred on result: {result}: {e}')
+                    except Exception:
                         continue
         else:
             print(f'Onhyphe API query did not succeed dumping current response: {self.response}')

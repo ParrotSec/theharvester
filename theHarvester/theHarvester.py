@@ -11,7 +11,14 @@ def main():
         import multiprocessing
 
         multiprocessing.freeze_support()
-        asyncio.DefaultEventLoopPolicy = asyncio.WindowsSelectorEventLoopPolicy
+        try:
+            # See if we have winloop as a performance enhancement on windows
+            import winloop
+
+            asyncio.DefaultEventLoopPolicy = winloop.EventLoopPolicy
+        except ModuleNotFoundError:
+            # Fallback to WindowsSelectorEventLoopPolicy if available, else keep default
+            asyncio.DefaultEventLoopPolicy = getattr(asyncio, 'WindowsSelectorEventLoopPolicy', asyncio.DefaultEventLoopPolicy)
     else:
         import uvloop
 

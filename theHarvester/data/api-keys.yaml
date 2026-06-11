@@ -1,14 +1,18 @@
 apikeys:
+
   bevigil:
     key:
 
-  binaryedge:
+  bitbucket:
     key:
 
-  bing:
+  brave:
     key:
 
   bufferoverun:
+    key:
+
+  builtwith:
     key:
 
   censys:
@@ -18,10 +22,26 @@ apikeys:
   criminalip:
     key:
 
+  dehashed:
+    key:
+
+  dnsdumpster:
+    key:
+
+  fofa:
+    key:
+    email:
+
   fullhunt:
     key:
 
   github:
+    key:
+
+  hackertarget:
+    key:
+
+  haveibeenpwned:
     key:
 
   hunter:
@@ -31,6 +51,12 @@ apikeys:
     key:
 
   intelx:
+    key:
+
+  leakix:
+    key:
+
+  leaklookup:
     key:
 
   netlas:
@@ -48,6 +74,9 @@ apikeys:
   rocketreach:
     key:
 
+  securityscorecard:
+    key:
+
   securityTrails:
     key:
 
@@ -58,7 +87,16 @@ apikeys:
     key:
     secret:
 
+  venacus:
+    key:
+
   virustotal:
+    key:
+
+  whoisxml:
+    key:
+
+  windvane:
     key:
 
   zoomeye:

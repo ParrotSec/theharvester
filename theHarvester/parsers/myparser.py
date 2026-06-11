@@ -8,7 +8,7 @@ class Parser:
         self.word = word
         self.temp: list = []
 
-    async def genericClean(self) -> None:
+    async def generic_clean(self) -> None:
         self.results = (
             self.results.replace('<em>', '')
             .replace('<b>', '')
@@ -37,22 +37,24 @@ class Parser:
         ):
             self.results = self.results.replace(search, ' ')
 
-    async def urlClean(self) -> None:
+    async def url_clean(self) -> None:
         self.results = self.results.replace('<em>', '').replace('</em>', '').replace('%2f', '').replace('%3a', '')
         for search in ('<', '>', ':', '=', ';', '&', '%3A', '%3D', '%3C'):
             self.results = self.results.replace(search, ' ')
 
     async def emails(self):
-        await self.genericClean()
+        await self.generic_clean()
         # Local part is required, charset is flexible.
         # https://tools.ietf.org/html/rfc6531 (removed * and () as they provide FP mostly)
         reg_emails = re.compile(r'[a-zA-Z0-9.\-_+#~!$&\',;=:]+' + '@' + '[a-zA-Z0-9.-]*' + self.word.replace('www.', ''))
         self.temp = reg_emails.findall(self.results)
         emails = await self.unique()
         true_emails = {
-            str(email)[1:].lower().strip()
-            if len(str(email)) > 1 and str(email)[0] == '.'
-            else len(str(email)) > 1 and str(email).lower().strip()
+            (
+                str(email)[1:].lower().strip()
+                if len(str(email)) > 1 and str(email)[0] == '.'
+                else len(str(email)) > 1 and str(email).lower().strip()
+            )
             for email in emails
         }
         # if email starts with dot shift email string and make sure all emails are lowercase
@@ -73,7 +75,7 @@ class Parser:
     async def hostnames(self):
         # should check both www. and not www.
         hostnames = []
-        await self.genericClean()
+        await self.generic_clean()
         reg_hosts = re.compile(r'[a-zA-Z0-9.-]*\.' + self.word)
         first_hostnames = reg_hosts.findall(self.results)
         hostnames.extend(first_hostnames)
@@ -108,7 +110,7 @@ class Parser:
         return sets
 
     async def urls(self) -> Set[str]:
-        found = re.finditer(r'(http|https)://(www\.)?trello.com/([a-zA-Z\d\-_\.]+/?)*', self.results)
+        found = re.finditer(r'(http|https)://(www\.)?trello.com/([a-zA-Z\d\-_.]+/?)*', self.results)
         urls = {match.group().strip() for match in found}
         return urls
 

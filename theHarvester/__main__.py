@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import argparse
 import asyncio
 import os
@@ -7,57 +6,102 @@ import secrets
 import string
 import sys
 import time
-from typing import Any
+import traceback
+from typing import TYPE_CHECKING, Any
 
+import anyio
 import netaddr
 import ujson
 from aiomultiprocess import Pool
 
 from theHarvester.discovery import (
-    anubis,
+    api_endpoints,
     baidusearch,
     bevigil,
-    binaryedgesearch,
-    bingsearch,
+    bitbucket,
     bravesearch,
     bufferoverun,
+    builtwith,
     censysearch,
     certspottersearch,
+    chaos,
+    commoncrawl,
     criminalip,
     crtsh,
-    dnsdumpster,
     dnssearch,
     duckduckgosearch,
+    fofa,
     fullhuntsearch,
     githubcode,
+    gitlabsearch,
     hackertarget,
+    haveibeenpwned,
+    hudsonrocksearch,
     huntersearch,
     intelxsearch,
+    leakix,
+    leaklookup,
     netlas,
     onyphe,
     otxsearch,
     pentesttools,
     projectdiscovery,
     rapiddns,
+    robtex,
     rocketreach,
+    search_dehashed,
+    search_dnsdumpster,
     searchhunterhow,
+    securityscorecard,
     securitytrailssearch,
     shodansearch,
-    sitedossier,
     subdomaincenter,
     subdomainfinderc99,
     takeover,
-    threatminer,
+    thc,
+    threatcrowd,
     tombasearch,
     urlscan,
+    venacussearch,
     virustotal,
+    waybackarchive,
+    whoisxml,
+    windvane,
     yahoosearch,
     zoomeyesearch,
 )
 from theHarvester.discovery.constants import MissingKey
 from theHarvester.lib import hostchecker, stash
-from theHarvester.lib.core import Core
+from theHarvester.lib.core import DATA_DIR, Core, show_default_error_message
+from theHarvester.lib.output import print_linkedin_sections, print_section, sorted_unique
 from theHarvester.screenshot.screenshot import ScreenShotter
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable
+
+
+def sanitize_for_xml(text: str) -> str:
+    """Sanitize text for safe inclusion in XML documents."""
+    text = text.replace('&', '&amp;')
+    text = text.replace('<', '&lt;')
+    text = text.replace('>', '&gt;')
+    text = text.replace('"', '&quot;')
+    text = text.replace("'", '&apos;')
+    return text
+
+
+def sanitize_filename(filename: str) -> str:
+    filename = os.path.basename(filename)
+    filename = re.sub(r'[^a-zA-Z0-9._-]', '_', filename)
+    # Remove consecutive underscores
+    filename = re.sub(r'_+', '_', filename)
+    filename = filename.strip('_.')
+    if filename.startswith('.'):
+        filename = '_' + filename
+    # Ensure we have a valid filename
+    if not filename:
+        filename = 'sanitized_file'
+    return filename
 
 
 async def start(rest_args: argparse.Namespace | None = None):
@@ -100,14 +144,7 @@ async def start(rest_args: argparse.Namespace | None = None):
         default='',
         type=str,
     )
-    parser.add_argument(
-        '-v',
-        '--virtual-host',
-        help='Verify host name via DNS resolution and search for virtual hosts.',
-        action='store_const',
-        const='basic',
-        default=False,
-    )
+
     parser.add_argument('-e', '--dns-server', help='DNS server to use for lookup.')
     parser.add_argument(
         '-t',
@@ -145,17 +182,26 @@ async def start(rest_args: argparse.Namespace | None = None):
         default='',
         type=str,
     )
+    parser.add_argument('-w', '--wordlist', help='Specify a wordlist for API endpoint scanning.', default='')
+    parser.add_argument('-a', '--api-scan', help='Scan for API endpoints.', action='store_true')
+    parser.add_argument(
+        '-q',
+        '--quiet',
+        help='Suppress missing API key warnings and reading the api-keys file.',
+        default=False,
+        action='store_true',
+    )
     parser.add_argument(
         '-b',
         '--source',
-        help="""anubis, baidu, bevigil, binaryedge, bing, bingapi, bufferoverun, brave,
-                            censys, certspotter, criminalip, crtsh, dnsdumpster, duckduckgo, fullhunt, github-code,
-                            hackertarget, hunter, hunterhow, intelx, netlas, onyphe, otx, pentesttools, projectdiscovery,
-                            rapiddns, rocketreach, securityTrails, sitedossier, subdomaincenter, subdomainfinderc99, threatminer, tomba,
-                            urlscan, virustotal, yahoo, zoomeye""",
+        help="""baidu, bevigil, bitbucket, brave, bufferoverun,
+                            builtwith, censys, certspotter, chaos, commoncrawl, criminalip, crtsh, dehashed, dnsdumpster, duckduckgo, fofa, fullhunt, github-code,
+                            gitlab, hackertarget, haveibeenpwned, hudsonrock, hunter, hunterhow, intelx, leakix, leaklookup, netlas, onyphe, otx, pentesttools,
+                            projectdiscovery, rapiddns, robtex, rocketreach, securityscorecard, securityTrails, shodan, subdomaincenter,
+                            subdomainfinderc99, thc, threatcrowd, tomba, urlscan, venacus, virustotal, waybackarchive, whoisxml, windvane, yahoo, zoomeye""",
     )
 
-    # determines if filename is coming from rest api or user
+    # determines if the filename is coming from rest api or user
     rest_filename = ''
     # indicates this from the rest API
     if rest_args:
@@ -169,62 +215,75 @@ async def start(rest_args: argparse.Namespace | None = None):
             # We need to make sure the filename is random as to not overwrite other files
             filename: str = args.filename
             alphabet = string.ascii_letters + string.digits
-            rest_filename += f"{''.join(secrets.choice(alphabet) for _ in range(32))}_{filename}" if len(filename) != 0 else ''
+            rest_filename += f'{"".join(secrets.choice(alphabet) for _ in range(32))}_{filename}' if len(filename) != 0 else ''
     else:
         args = parser.parse_args()
         filename = args.filename
         dnsbrute = (args.dns_brute, False)
+    Core.quiet = getattr(args, 'quiet', False)
     try:
         db = stash.StashManager()
         await db.do_init()
     except Exception:
-        pass
+        raise ValueError('Failed to initialize StashManager')
 
-    if len(filename) > 2 and filename[:2] == '~/':
-        filename = os.path.expanduser(filename)
+    if len(filename) > 0:
+        if filename.startswith('~/'):
+            # Allow home directory expansion but sanitize the rest
+            base_path = await anyio.Path('~').expanduser()
+            sanitized = sanitize_filename(filename[2:])
+            filename = str(base_path.joinpath(sanitized))
+        elif os.path.isabs(filename):
+            # For absolute paths, sanitize just the filename component
+            dirname = os.path.dirname(filename)
+            basename = sanitize_filename(os.path.basename(filename))
+            filename = os.path.join(dirname, basename)
+        else:
+            # For relative paths, sanitize the entire filename
+            filename = sanitize_filename(filename)
 
     all_emails: list = []
     all_hosts: list = []
     all_ip: list = []
+    all_people: list[dict[str, str]] = []
     dnslookup = args.dns_lookup
     dnsserver = args.dns_server  # TODO arg is not used anywhere replace with resolvers wordlist arg dnsresolve
-    dnsresolve = args.dns_resolve
+    dnsresolve: str | None = args.dns_resolve
     final_dns_resolver_list = []
     if dnsresolve is not None and len(dnsresolve) > 0:
         # Three scenarios:
         # 8.8.8.8
         # 1.1.1.1,8.8.8.8 or 1.1.1.1, 8.8.8.8
         # resolvers.txt
-        if os.path.exists(dnsresolve):
+        if await anyio.Path(dnsresolve).exists():
             with open(dnsresolve, encoding='UTF-8') as fp:
                 for line in fp:
                     line = line.strip()
+                    if len(line) == 0:
+                        continue
                     try:
-                        if len(line) > 0:
-                            _ = netaddr.IPAddress(line)
-                            final_dns_resolver_list.append(line)
+                        _ = netaddr.IPAddress(line)
+                        final_dns_resolver_list.append(line)
                     except Exception as e:
                         print(f'An exception has occurred while reading from: {dnsresolve}, {e}')
                         print(f'Current line: {line}')
-                        return
         else:
-            try:
-                if ',' in dnsresolve:
-                    cleaned = dnsresolve.replace(' ', '')
-                    for item in cleaned.split(','):
-                        _ = netaddr.IPAddress(item)
-                        final_dns_resolver_list.append(item)
-                else:
-                    # Verify user passed in actual IP address does not verify if the IP is a resolver just if an IP
-                    _ = netaddr.IPAddress(dnsresolve)
-                    final_dns_resolver_list.append(dnsresolve)
-            except Exception as e:
-                print(f'Passed in DNS resolvers are invalid double check, got error: {e}')
-                print(f'Dumping resolvers passed in: {e}')
-                sys.exit(0)
+            cleaned = dnsresolve.replace(' ', '')
+            resolver_candidates = cleaned.split(',') if ',' in cleaned else [cleaned]
+            for item in resolver_candidates:
+                if len(item) == 0:
+                    continue
+                try:
+                    # Verify user passed in an IP; this does not validate resolver behavior
+                    _ = netaddr.IPAddress(item)
+                    final_dns_resolver_list.append(item)
+                except Exception as e:
+                    print(f'Passed DNS resolver is invalid, skipping: {item} ({e})')
 
         # if for some reason, there are duplicates
         final_dns_resolver_list = list(set(final_dns_resolver_list))
+        if len(final_dns_resolver_list) == 0:
+            print('No valid DNS resolvers were parsed from --dns-resolve; continuing without custom resolvers.')
 
     engines: list = []
     # If the user specifies
@@ -236,7 +295,6 @@ async def start(rest_args: argparse.Namespace | None = None):
     start: int = args.start
     all_urls: list = []
     vhost: list = []
-    virtual = args.virtual_host
     word: str = args.domain.rstrip('\n')
     takeover_status = args.take_over
     use_proxy = args.proxies
@@ -282,11 +340,15 @@ async def start(rest_args: argparse.Namespace | None = None):
         :param store_interestingurls: whether to store interesting urls
         :param store_asns: whether to store asns
         """
-        await search_engine.process(use_proxy) if process_param is None else await search_engine.process(process_param, use_proxy)
+        (
+            await search_engine.process(use_proxy)
+            if process_param is None
+            else await search_engine.process(process_param, use_proxy)
+        )
         db_stash = stash.StashManager()
 
         if source:
-            print(f'\033[94m[*] Searching {source[0].upper() + source[1:]}. ')
+            print(f'[*] Searching {source[0].upper() + source[1:]}. ')
 
         if store_host:
             host_names = list({host for host in await search_engine.get_hostnames() if f'.{word}' in host})
@@ -300,7 +362,7 @@ async def start(rest_args: argparse.Namespace | None = None):
                     # If full, this is only getting resolved hosts
                     (
                         resolved_pair,
-                        temp_hosts,
+                        _temp_hosts,
                         temp_ips,
                     ) = await full_hosts_checker.check()
                     all_ip.extend(temp_ips)
@@ -334,25 +396,26 @@ async def start(rest_args: argparse.Namespace | None = None):
 
         if store_people:
             people_list = await search_engine.get_people()
+            all_people.extend(people_list)
             await db_stash.store_all(word, people_list, 'people', source)
 
         if store_links:
             links = await search_engine.get_links()
             linkedin_links_tracker.extend(links)
             if len(links) > 0:
-                await db.store_all(word, links, 'linkedinlinks', engineitem)
+                await db.store_all(word, links, 'linkedinlinks', source)
 
         if store_interestingurls:
             iurls = await search_engine.get_interestingurls()
             interesting_urls.extend(iurls)
             if len(iurls) > 0:
-                await db.store_all(word, iurls, 'interestingurls', engineitem)
+                await db.store_all(word, iurls, 'interestingurls', source)
 
         if store_asns:
             fasns = await search_engine.get_asns()
             total_asns.extend(fasns)
             if len(fasns) > 0:
-                await db.store_all(word, fasns, 'asns', engineitem)
+                await db.store_all(word, fasns, 'asns', source)
 
     stor_lst = []
     if args.source is not None:
@@ -365,14 +428,7 @@ async def start(rest_args: argparse.Namespace | None = None):
             print(f'\n[*] Target: {word} \n')
 
             for engineitem in engines:
-                if engineitem == 'anubis':
-                    try:
-                        anubis_search = anubis.SearchAnubis(word)
-                        stor_lst.append(store(anubis_search, engineitem, store_host=True))
-                    except Exception as e:
-                        print(e)
-
-                elif engineitem == 'baidu':
+                if engineitem == 'baidu':
                     try:
                         baidu_search = baidusearch.SearchBaidu(word, limit)
                         stor_lst.append(
@@ -384,7 +440,7 @@ async def start(rest_args: argparse.Namespace | None = None):
                             )
                         )
                     except Exception as e:
-                        print(e)
+                        show_default_error_message(engineitem, word, e)
 
                 elif engineitem == 'bevigil':
                     try:
@@ -398,51 +454,24 @@ async def start(rest_args: argparse.Namespace | None = None):
                             )
                         )
                     except Exception as e:
-                        print(e)
+                        show_default_error_message(engineitem, word, error=e)
 
-                elif engineitem == 'binaryedge':
+                elif engineitem == 'bitbucket':
                     try:
-                        binaryedge_search = binaryedgesearch.SearchBinaryEdge(word, limit)
-                        stor_lst.append(store(binaryedge_search, engineitem, store_host=True))
-                    except Exception as e:
-                        print(e)
-
-                elif engineitem == 'bing' or engineitem == 'bingapi':
-                    try:
-                        bing_search = bingsearch.SearchBing(word, limit, start)
-                        bingapi = ''
-                        if engineitem == 'bingapi':
-                            bingapi += 'yes'
-                        else:
-                            bingapi += 'no'
+                        bitbucket_search = bitbucket.SearchBitBucket(word, limit)
                         stor_lst.append(
                             store(
-                                bing_search,
-                                'bing',
-                                process_param=bingapi,
+                                bitbucket_search,
+                                engineitem,
                                 store_host=True,
                                 store_emails=True,
                             )
                         )
-                    except Exception as e:
-                        if isinstance(e, MissingKey):
-                            print(e)
+                    except Exception as ex:
+                        if isinstance(ex, MissingKey):
+                            print(MissingKey('Bitbucket'))
                         else:
-                            print(e)
-
-                elif engineitem == 'bufferoverun':
-                    try:
-                        bufferoverun_search = bufferoverun.SearchBufferover(word)
-                        stor_lst.append(
-                            store(
-                                bufferoverun_search,
-                                engineitem,
-                                store_host=True,
-                                store_ip=True,
-                            )
-                        )
-                    except Exception as e:
-                        print(e)
+                            show_default_error_message(engineitem, word, ex)
 
                 elif engineitem == 'brave':
                     try:
@@ -456,7 +485,32 @@ async def start(rest_args: argparse.Namespace | None = None):
                             )
                         )
                     except Exception as e:
-                        print(e)
+                        show_default_error_message(engineitem, word, error=e)
+
+                elif engineitem == 'bufferoverun':
+                    try:
+                        bufferoverun_search = bufferoverun.SearchBufferover(word)
+                        stor_lst.append(
+                            store(
+                                bufferoverun_search,
+                                engineitem,
+                                store_host=True,
+                                store_ip=True,
+                            )
+                        )
+                    except Exception as e:
+                        show_default_error_message(engineitem, word, e)
+
+                elif engineitem == 'builtwith':
+                    try:
+                        builtwith_search = builtwith.SearchBuiltWith(word)
+                        stor_lst.append(store(builtwith_search, engineitem, store_host=True, store_interestingurls=True))
+                    except Exception as e:
+                        if isinstance(e, MissingKey):
+                            print(f"Failed to perform BuiltWith search for word: '{word}'")
+                            print(f'A Missing Key Error occurred in builtwith: {e}')
+                        else:
+                            show_default_error_message(engineitem, word, e)
 
                 elif engineitem == 'censys':
                     try:
@@ -469,16 +523,71 @@ async def start(rest_args: argparse.Namespace | None = None):
                                 store_emails=True,
                             )
                         )
+                    except MissingKey as mk:
+                        if not args.quiet:
+                            print(f'Censys API key is missing or invalid: {mk}')
+                    except ConnectionError as ce:
+                        if not args.quiet:
+                            print(f'Network error while querying Censys: {ce}')
+                    except TimeoutError as te:
+                        if not args.quiet:
+                            print(f'Timeout occurred while contacting Censys: {te}')
+                    except ValueError as ve:
+                        if not args.quiet:
+                            print(f'Censys returned unexpected data: {ve}')
                     except Exception as e:
-                        if isinstance(e, MissingKey):
-                            print(e)
+                        if not args.quiet:
+                            print(f'Unexpected error occurred in Censys module: {e}')
 
                 elif engineitem == 'certspotter':
                     try:
                         certspotter_search = certspottersearch.SearchCertspoter(word)
                         stor_lst.append(store(certspotter_search, engineitem, None, store_host=True))
+                    except ConnectionError as ce:
+                        if not args.quiet:
+                            print(f'Network connection error while accessing Certspotter: {ce}')
+                    except TimeoutError as te:
+                        if not args.quiet:
+                            print(f'Request to Certspotter timed out: {te}')
+                    except ValueError as ve:
+                        if not args.quiet:
+                            print(f'Certspotter returned invalid data: {ve}')
+                    except MissingKey as mk:
+                        if not args.quiet:
+                            print(f'Unexpected response structure from Certspotter (missing key): {mk}')
                     except Exception as e:
-                        print(e)
+                        if not args.quiet:
+                            print(f'Unexpected error occurred in Certspotter module: {e}')
+
+                elif engineitem == 'chaos':
+                    try:
+                        chaos_search = chaos.SearchChaos(word)
+                        stor_lst.append(
+                            store(
+                                chaos_search,
+                                engineitem,
+                                store_host=True,
+                            )
+                        )
+                    except Exception as e:
+                        if isinstance(e, MissingKey):
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in Chaos: {e}')
+                        else:
+                            show_default_error_message(engineitem, word, e)
+
+                elif engineitem == 'commoncrawl':
+                    try:
+                        commoncrawl_search = commoncrawl.SearchCommoncrawl(word)
+                        stor_lst.append(
+                            store(
+                                commoncrawl_search,
+                                engineitem,
+                                store_host=True,
+                            )
+                        )
+                    except Exception as e:
+                        show_default_error_message(engineitem, word, e)
 
                 elif engineitem == 'criminalip':
                     try:
@@ -494,9 +603,10 @@ async def start(rest_args: argparse.Namespace | None = None):
                         )
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing key error occurred in criminalip: {e}')
                         else:
-                            print(f'An excepion has occurred in criminalip: {e}')
+                            show_default_error_message(engineitem, word, e)
 
                 elif engineitem == 'crtsh':
                     try:
@@ -505,19 +615,40 @@ async def start(rest_args: argparse.Namespace | None = None):
                     except Exception as e:
                         print(f'[!] A timeout occurred with crtsh, cannot find {args.domain}\n {e}')
 
-                elif engineitem == 'dnsdumpster':
+                elif engineitem == 'dehashed':
                     try:
-                        dns_dumpster_search = dnsdumpster.SearchDnsDumpster(word)
+                        dehashed_search = search_dehashed.SearchDehashed(word)
                         stor_lst.append(
                             store(
-                                dns_dumpster_search,
+                                dehashed_search,
+                                engineitem,
+                                store_host=False,
+                                store_ip=True,
+                            )
+                        )
+                    except Exception as e:
+                        if isinstance(e, MissingKey):
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in dehashed: {e}')
+                        else:
+                            show_default_error_message(engineitem, word, e)
+
+                elif engineitem == 'dnsdumpster':
+                    try:
+                        dnsdumpster_search = search_dnsdumpster.SearchDNSDumpster(word)
+                        stor_lst.append(
+                            store(
+                                dnsdumpster_search,
                                 engineitem,
                                 store_host=True,
                                 store_ip=True,
                             )
                         )
+                    except MissingKey as e:
+                        if not args.quiet:
+                            print(e)
                     except Exception as e:
-                        print(f'[!] An error occurred with dnsdumpster: {e}')
+                        show_default_error_message(engineitem, word, e)
 
                 elif engineitem == 'duckduckgo':
                     duckduckgo_search = duckduckgosearch.SearchDuckDuckGo(word, limit)
@@ -530,13 +661,32 @@ async def start(rest_args: argparse.Namespace | None = None):
                         )
                     )
 
+                elif engineitem == 'fofa':
+                    try:
+                        fofa_search = fofa.SearchFofa(word)
+                        stor_lst.append(
+                            store(
+                                fofa_search,
+                                engineitem,
+                                store_host=True,
+                                store_ip=True,
+                            )
+                        )
+                    except Exception as e:
+                        if isinstance(e, MissingKey):
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in Fofa: {e}')
+                        else:
+                            show_default_error_message(engineitem, word, e)
+
                 elif engineitem == 'fullhunt':
                     try:
                         fullhunt_search = fullhuntsearch.SearchFullHunt(word)
                         stor_lst.append(store(fullhunt_search, engineitem, store_host=True))
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in fullhunt: {e}')
 
                 elif engineitem == 'github-code':
                     try:
@@ -550,11 +700,61 @@ async def start(rest_args: argparse.Namespace | None = None):
                             )
                         )
                     except MissingKey as ex:
-                        print(ex)
+                        if not args.quiet:
+                            print(f'A Missing Key error occurred in github-code: {ex}')
+
+                elif engineitem == 'gitlab':
+                    try:
+                        gitlab_search = gitlabsearch.SearchGitlab(word)
+                        stor_lst.append(
+                            store(
+                                gitlab_search,
+                                engineitem,
+                                store_host=True,
+                                store_emails=True,
+                            )
+                        )
+                    except Exception as e:
+                        show_default_error_message(engineitem, word, e)
 
                 elif engineitem == 'hackertarget':
-                    hackertarget_search = hackertarget.SearchHackerTarget(word)
-                    stor_lst.append(store(hackertarget_search, engineitem, store_host=True))
+                    try:
+                        hackertarget_search = hackertarget.SearchHackerTarget(word)
+                        stor_lst.append(store(hackertarget_search, engineitem, store_host=True))
+                    except Exception as e:
+                        show_default_error_message(engineitem, word, e)
+
+                elif engineitem == 'haveibeenpwned':
+                    try:
+                        haveibeenpwned_search = haveibeenpwned.SearchHaveIBeenPwned(word)
+                        stor_lst.append(
+                            store(
+                                haveibeenpwned_search,
+                                engineitem,
+                                store_emails=True,
+                            )
+                        )
+                    except Exception as e:
+                        if isinstance(e, MissingKey):
+                            if not args.quiet:
+                                print(MissingKey('HaveIBeenPwned'))
+                        else:
+                            print(f'An exception has occurred in HaveIBeenPwned search: {e}')
+
+                elif engineitem == 'hudsonrock':
+                    try:
+                        hudsonrock_search = hudsonrocksearch.SearchHudsonRock(word)
+                        stor_lst.append(
+                            store(
+                                hudsonrock_search,
+                                engineitem,
+                                store_host=True,
+                                store_emails=True,
+                                store_ip=True,
+                            )
+                        )
+                    except Exception as e:
+                        print(f'An exception has occurred in Hudson Rock search: {e}')
 
                 elif engineitem == 'hunter':
                     try:
@@ -569,7 +769,8 @@ async def start(rest_args: argparse.Namespace | None = None):
                         )
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in Hunter: {e}')
 
                 elif engineitem == 'hunterhow':
                     try:
@@ -577,7 +778,8 @@ async def start(rest_args: argparse.Namespace | None = None):
                         stor_lst.append(store(hunterhow_search, engineitem, store_host=True))
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in Hunter How: {e}')
                         else:
                             print(f'An exception has occurred in hunterhow search: {e}')
 
@@ -594,13 +796,44 @@ async def start(rest_args: argparse.Namespace | None = None):
                         )
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in intelx: {e}')
                         else:
                             print(f'An exception has occurred in Intelx search: {e}')
 
+                elif engineitem == 'leakix':
+                    try:
+                        leakix_search = leakix.SearchLeakix(word)
+                        stor_lst.append(
+                            store(
+                                leakix_search,
+                                engineitem,
+                                store_host=True,
+                                store_emails=True,
+                            )
+                        )
+                    except Exception as e:
+                        show_default_error_message(engineitem, word, e)
+
+                elif engineitem == 'leaklookup':
+                    try:
+                        leaklookup_search = leaklookup.SearchLeakLookup(word)
+                        stor_lst.append(
+                            store(
+                                leaklookup_search,
+                                engineitem,
+                                store_emails=True,
+                            )
+                        )
+                    except Exception as e:
+                        if isinstance(e, MissingKey):
+                            print(f'A Missing Key error occurred in LeakLookup: {e}')
+                        else:
+                            print(f'An exception has occurred in LeakLookup search: {e}')
+
                 elif engineitem == 'netlas':
                     try:
-                        netlas_search = netlas.SearchNetlas(word)
+                        netlas_search = netlas.SearchNetlas(word, limit)
                         stor_lst.append(
                             store(
                                 netlas_search,
@@ -611,7 +844,8 @@ async def start(rest_args: argparse.Namespace | None = None):
                         )
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in Netlas: {e}')
 
                 elif engineitem == 'onyphe':
                     try:
@@ -625,8 +859,21 @@ async def start(rest_args: argparse.Namespace | None = None):
                                 store_asns=True,
                             )
                         )
+                    except ConnectionError as ce:
+                        if not args.quiet:
+                            print(f'Network connection error while accessing Onyphe: {ce}')
+                    except TimeoutError as te:
+                        if not args.quiet:
+                            print(f'Request to Onyphe timed out: {te}')
+                    except ValueError as ve:
+                        if not args.quiet:
+                            print(f'Onyphe returned invalid or unexpected data: {ve}')
+                    except KeyError as ke:
+                        if not args.quiet:
+                            print(f'Unexpected response structure from Onyphe (missing key): {ke}')
                     except Exception as e:
-                        print(e)
+                        if not args.quiet:
+                            print(f'Unexpected error occurred in Onyphe module: {e}')
 
                 elif engineitem == 'otx':
                     try:
@@ -639,8 +886,21 @@ async def start(rest_args: argparse.Namespace | None = None):
                                 store_ip=True,
                             )
                         )
+                    except ConnectionError as ce:
+                        if not args.quiet:
+                            print(f'Network connection error while accessing OTX: {ce}')
+                    except TimeoutError as te:
+                        if not args.quiet:
+                            print(f'Request to OTX timed out: {te}')
+                    except ValueError as ve:
+                        if not args.quiet:
+                            print(f'OTX returned invalid or unexpected data: {ve}')
+                    except KeyError as ke:
+                        if not args.quiet:
+                            print(f'Unexpected response structure from OTX (missing key): {ke}')
                     except Exception as e:
-                        print(e)
+                        if not args.quiet:
+                            print(f'Unexpected error occurred in OTX module: {e}')
 
                 elif engineitem == 'pentesttools':
                     try:
@@ -648,7 +908,8 @@ async def start(rest_args: argparse.Namespace | None = None):
                         stor_lst.append(store(pentesttools_search, engineitem, store_host=True))
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in PentestTools search: {e}')
                         else:
                             print(f'An exception has occurred in PentestTools search: {e}')
 
@@ -658,7 +919,8 @@ async def start(rest_args: argparse.Namespace | None = None):
                         stor_lst.append(store(projectdiscovery_search, engineitem, store_host=True))
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in ProjectDiscovery: {e}')
                         else:
                             print('An exception has occurred in ProjectDiscovery')
 
@@ -666,25 +928,65 @@ async def start(rest_args: argparse.Namespace | None = None):
                     try:
                         rapiddns_search = rapiddns.SearchRapidDns(word)
                         stor_lst.append(store(rapiddns_search, engineitem, store_host=True))
+                    except ConnectionError as ce:
+                        if not args.quiet:
+                            print(f'Network connection error while accessing RapidDNS: {ce}')
+                    except TimeoutError as te:
+                        if not args.quiet:
+                            print(f'Request to RapidDNS timed out: {te}')
+                    except ValueError as ve:
+                        if not args.quiet:
+                            print(f'RapidDNS returned invalid or unexpected data: {ve}')
+                    except KeyError as ke:
+                        if not args.quiet:
+                            print(f'Unexpected response structure from RapidDNS (missing key): {ke}')
                     except Exception as e:
-                        print(e)
+                        if not args.quiet:
+                            print(f'Unexpected error occurred in RapidDNS module: {e}')
+
+                elif engineitem == 'robtex':
+                    try:
+                        robtex_search = robtex.SearchRobtex(word)
+                        stor_lst.append(
+                            store(
+                                robtex_search,
+                                engineitem,
+                                store_host=True,
+                                store_ip=True,
+                            )
+                        )
+                    except Exception as e:
+                        show_default_error_message(engineitem, word, e)
 
                 elif engineitem == 'rocketreach':
                     try:
                         rocketreach_search = rocketreach.SearchRocketReach(word, limit)
-                        stor_lst.append(store(rocketreach_search, engineitem, store_links=True))
+                        stor_lst.append(store(rocketreach_search, engineitem, store_links=True, store_emails=True))
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in RocketReach: {e}')
                         else:
                             print(f'An exception has occurred in RocketReach: {e}')
 
-                elif engineitem == 'subdomaincenter':
+                elif engineitem == 'securityscorecard':
                     try:
-                        subdomaincenter_search = subdomaincenter.SubdomainCenter(word)
-                        stor_lst.append(store(subdomaincenter_search, engineitem, store_host=True))
+                        securityscorecard_search = securityscorecard.SearchSecurityScorecard(word)
+                        stor_lst.append(
+                            store(
+                                securityscorecard_search,
+                                engineitem,
+                                store_host=True,
+                                store_ip=True,
+                                store_interestingurls=True,
+                                store_asns=True,
+                            )
+                        )
                     except Exception as e:
-                        print(e)
+                        if isinstance(e, MissingKey):
+                            print(MissingKey('SecurityScorecard'))
+                        else:
+                            print(f'An exception has occurred in SecurityScorecard search: {e}')
 
                 elif engineitem == 'securityTrails':
                     try:
@@ -699,14 +1001,72 @@ async def start(rest_args: argparse.Namespace | None = None):
                         )
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred Security Trails: {e}')
 
-                elif engineitem == 'sitedossier':
+                elif engineitem == 'shodan':
                     try:
-                        sitedossier_search = sitedossier.SearchSitedossier(word)
-                        stor_lst.append(store(sitedossier_search, engineitem, store_host=True))
+                        shodan_search = shodansearch.SearchShodan()
+
+                        # For normal module usage, we need to create a wrapper that works with the store function
+                        class ShodanWrapper:
+                            def __init__(self, domain):
+                                self.word = domain
+                                self.hosts = set()
+                                self.shodan = shodan_search
+
+                            async def process(self, use_proxy: bool = False):
+                                import socket
+
+                                try:
+                                    # Resolve domain to IP and search in Shodan
+                                    ip = socket.gethostbyname(self.word)
+                                    print(f'\tSearching Shodan for {ip}')
+                                    result = await self.shodan.search_ip(ip)
+                                    if ip in result and isinstance(result[ip], dict):
+                                        # Add the IP as a host for consistency with other modules
+                                        self.hosts.add(ip)
+
+                                        for host in result[ip].get('hostnames', []):
+                                            self.hosts.add(host)
+
+                                        print(f'Found Shodan data for {ip}')
+                                    elif ip in result and isinstance(result[ip], str):
+                                        print(f'{ip}: {result[ip]}')
+                                except Exception as e:
+                                    print(f'Error in Shodan search: {e}')
+
+                            async def get_hostnames(self):
+                                return list(self.hosts)
+
+                        shodan_wrapper = ShodanWrapper(word)
+                        stor_lst.append(store(shodan_wrapper, engineitem, store_host=True))
                     except Exception as e:
-                        print(e)
+                        if isinstance(e, MissingKey):
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in Shodan search: {e}')
+                        else:
+                            print(f'An exception has occurred in Shodan search: {e}')
+
+                elif engineitem == 'subdomaincenter':
+                    try:
+                        subdomaincenter_search = subdomaincenter.SubdomainCenter(word)
+                        stor_lst.append(store(subdomaincenter_search, engineitem, store_host=True))
+                    except ConnectionError as ce:
+                        if not args.quiet:
+                            print(f'Network connection error while accessing SubdomainCenter: {ce}')
+                    except TimeoutError as te:
+                        if not args.quiet:
+                            print(f'Request to SubdomainCenter timed out: {te}')
+                    except ValueError as ve:
+                        if not args.quiet:
+                            print(f'SubdomainCenter returned invalid or unexpected data: {ve}')
+                    except KeyError as ke:
+                        if not args.quiet:
+                            print(f'Unexpected response structure from SubdomainCenter (missing key): {ke}')
+                    except Exception as e:
+                        if not args.quiet:
+                            print(f'Unexpected error occurred in SubdomainCenter module: {e}')
 
                 elif engineitem == 'subdomainfinderc99':
                     try:
@@ -714,23 +1074,31 @@ async def start(rest_args: argparse.Namespace | None = None):
                         stor_lst.append(store(subdomainfinderc99_search, engineitem, store_host=True))
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in Subdomainfinderc99 search: {e}')
                         else:
                             print(f'An exception has occurred in Subdomainfinderc99 search: {e}')
 
-                elif engineitem == 'threatminer':
+                elif engineitem == 'thc':
                     try:
-                        threatminer_search = threatminer.SearchThreatminer(word)
+                        thc_search = thc.SearchThc(word)
+                        stor_lst.append(store(thc_search, engineitem, store_host=True))
+                    except Exception as e:
+                        show_default_error_message(engineitem, word, e)
+
+                elif engineitem == 'threatcrowd':
+                    try:
+                        threatcrowd_search = threatcrowd.SearchThreatcrowd(word)
                         stor_lst.append(
                             store(
-                                threatminer_search,
+                                threatcrowd_search,
                                 engineitem,
                                 store_host=True,
                                 store_ip=True,
                             )
                         )
                     except Exception as e:
-                        print(e)
+                        show_default_error_message(engineitem, word, e)
 
                 elif engineitem == 'tomba':
                     try:
@@ -745,7 +1113,8 @@ async def start(rest_args: argparse.Namespace | None = None):
                         )
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in Tomba: {e}')
 
                 elif engineitem == 'urlscan':
                     try:
@@ -760,8 +1129,41 @@ async def start(rest_args: argparse.Namespace | None = None):
                                 store_asns=True,
                             )
                         )
+                    except ConnectionError as ce:
+                        if not args.quiet:
+                            print(f'Network connection error while accessing Urlscan: {ce}')
+                    except TimeoutError as te:
+                        if not args.quiet:
+                            print(f'Request to Urlscan timed out: {te}')
+                    except ValueError as ve:
+                        if not args.quiet:
+                            print(f'Urlscan returned invalid or unexpected data: {ve}')
+                    except KeyError as ke:
+                        if not args.quiet:
+                            print(f'Unexpected response structure from Urlscan (missing key): {ke}')
                     except Exception as e:
-                        print(e)
+                        if not args.quiet:
+                            print(f'Unexpected error occurred in Urlscan module: {e}')
+
+                elif engineitem == 'venacus':
+                    try:
+                        venacus_search = venacussearch.SearchVenacus(word=word, limit=limit, offset_doc=start)
+                        stor_lst.append(
+                            store(
+                                venacus_search,
+                                engineitem,
+                                store_emails=True,
+                                store_ip=True,
+                                store_people=True,
+                                store_interestingurls=True,
+                            )
+                        )
+                    except Exception as e:
+                        if isinstance(e, MissingKey):
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in venacus search: {e}')
+                        else:
+                            print(f'An exception has occurred in venacus search: {e}')
 
                 elif engineitem == 'virustotal':
                     try:
@@ -769,7 +1171,47 @@ async def start(rest_args: argparse.Namespace | None = None):
                         stor_lst.append(store(virustotal_search, engineitem, store_host=True))
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in virustotal search: {e}')
+
+                elif engineitem == 'waybackarchive':
+                    try:
+                        waybackarchive_search = waybackarchive.SearchWaybackarchive(word)
+                        stor_lst.append(
+                            store(
+                                waybackarchive_search,
+                                engineitem,
+                                store_host=True,
+                            )
+                        )
+                    except Exception as e:
+                        show_default_error_message(engineitem, word, e)
+
+                elif engineitem == 'whoisxml':
+                    try:
+                        whoisxml_search = whoisxml.SearchWhoisXML(word)
+                        stor_lst.append(store(whoisxml_search, engineitem, store_host=True))
+                    except Exception as e:
+                        if isinstance(e, MissingKey):
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in whoisxml search: {e}')
+                        else:
+                            print(f'An exception has occurred in WhoisXML search: {e}')
+
+                elif engineitem == 'windvane':
+                    try:
+                        windvane_search = windvane.SearchWindvane(word)
+                        stor_lst.append(
+                            store(
+                                windvane_search,
+                                engineitem,
+                                store_host=True,
+                                store_ip=True,
+                                store_emails=True,
+                            )
+                        )
+                    except Exception as e:
+                        show_default_error_message(engineitem, word, e)
 
                 elif engineitem == 'yahoo':
                     try:
@@ -782,8 +1224,21 @@ async def start(rest_args: argparse.Namespace | None = None):
                                 store_emails=True,
                             )
                         )
+                    except ConnectionError as ce:
+                        if not args.quiet:
+                            print(f'Network connection error while accessing Yahoo: {ce}')
+                    except TimeoutError as te:
+                        if not args.quiet:
+                            print(f'Request to Yahoo timed out: {te}')
+                    except ValueError as ve:
+                        if not args.quiet:
+                            print(f'Yahoo returned invalid or unexpected data: {ve}')
+                    except KeyError as ke:
+                        if not args.quiet:
+                            print(f'Unexpected response structure from Yahoo (missing key): {ke}')
                     except Exception as e:
-                        print(e)
+                        if not args.quiet:
+                            print(f'Unexpected error occurred in Yahoo module: {e}')
 
                 elif engineitem == 'zoomeye':
                     try:
@@ -801,17 +1256,22 @@ async def start(rest_args: argparse.Namespace | None = None):
                         )
                     except Exception as e:
                         if isinstance(e, MissingKey):
-                            print(e)
-        else:
-            if rest_args is not None:
-                try:
-                    rest_args.dns_brute
-                except Exception:
-                    print('\n[!] Invalid source.\n')
-                    sys.exit(1)
-            else:
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in zoomeye: {e}')
+
+        elif rest_args is not None:
+            try:
+                rest_args.dns_brute
+            except Exception:
                 print('\n[!] Invalid source.\n')
                 sys.exit(1)
+        else:
+            # Print which engines aren't supported
+            unsupported_engines = set(engines) - set(Core.get_supportedengines())
+            if unsupported_engines:
+                print(f'The following engines are not supported: {unsupported_engines}')
+            print('\n[!] Invalid source.\n')
+            sys.exit(1)
 
     async def worker(queue):
         while True:
@@ -822,10 +1282,11 @@ async def start(rest_args: argparse.Namespace | None = None):
                 queue.task_done()
                 # Notify the queue that the "work item" has been processed.
             except Exception:
+                print('\n A error occurred while processing a "work item".\n')
                 queue.task_done()
 
     async def handler(lst):
-        queue = asyncio.Queue()
+        queue: asyncio.Queue[Awaitable[Any]] = asyncio.Queue()
         for stor_method in lst:
             # enqueue the coroutines
             queue.put_nowait(stor_method)
@@ -878,45 +1339,26 @@ async def start(rest_args: argparse.Namespace | None = None):
 
     # Results
     if len(total_asns) > 0:
-        print(f'\n[*] ASNS found: {len(total_asns)}')
-        print('--------------------')
-        total_asns = list(sorted(set(total_asns)))
-        for asn in total_asns:
-            print(asn)
+        print_section(f'\n[*] ASNS found: {len(total_asns)}', total_asns, '--------------------')
+        total_asns = sorted_unique(total_asns)
 
     if len(interesting_urls) > 0:
-        print(f'\n[*] Interesting Urls found: {len(interesting_urls)}')
-        print('--------------------')
-        interesting_urls = list(sorted(set(interesting_urls)))
-        for iurl in interesting_urls:
-            print(iurl)
+        print_section(f'\n[*] Interesting Urls found: {len(interesting_urls)}', interesting_urls, '--------------------')
+        interesting_urls = sorted_unique(interesting_urls)
 
     if len(twitter_people_list_tracker) == 0 and 'twitter' in engines:
         print('\n[*] No Twitter users found.\n\n')
-    else:
-        if len(twitter_people_list_tracker) >= 1:
-            print('\n[*] Twitter Users found: ' + str(len(twitter_people_list_tracker)))
-            print('---------------------')
-            twitter_people_list_tracker = list(sorted(set(twitter_people_list_tracker)))
-            for usr in twitter_people_list_tracker:
-                print(usr)
+    elif len(twitter_people_list_tracker) >= 1:
+        print_section(
+            '\n[*] Twitter Users found: ' + str(len(twitter_people_list_tracker)),
+            twitter_people_list_tracker,
+            '---------------------',
+        )
+        twitter_people_list_tracker = sorted_unique(twitter_people_list_tracker)
 
-    if len(linkedin_people_list_tracker) == 0 and 'linkedin' in engines:
-        print('\n[*] No LinkedIn users found.\n\n')
-    else:
-        if len(linkedin_people_list_tracker) >= 1:
-            print('\n[*] LinkedIn Users found: ' + str(len(linkedin_people_list_tracker)))
-            print('---------------------')
-            linkedin_people_list_tracker = list(sorted(set(linkedin_people_list_tracker)))
-            for usr in linkedin_people_list_tracker:
-                print(usr)
-
-    if len(linkedin_links_tracker) == 0 and ('linkedin' in engines or 'rocketreach' in engines):
-        print(f'\n[*] LinkedIn Links found: {len(linkedin_links_tracker)}')
-        linkedin_links_tracker = list(sorted(set(linkedin_links_tracker)))
-        print('---------------------')
-        for link in linkedin_people_list_tracker:
-            print(link)
+    print_linkedin_sections(engines, linkedin_people_list_tracker, linkedin_links_tracker)
+    linkedin_people_list_tracker = sorted_unique(linkedin_people_list_tracker)
+    linkedin_links_tracker = sorted_unique(linkedin_links_tracker)
 
     length_urls = len(all_urls)
     if length_urls == 0:
@@ -924,11 +1366,8 @@ async def start(rest_args: argparse.Namespace | None = None):
             print('\n[*] No Trello URLs found.')
     else:
         total = length_urls
-        print('\n[*] Trello URLs found: ' + str(total))
-        print('--------------------')
-        all_urls = list(sorted(set(all_urls)))
-        for url in sorted(all_urls):
-            print(url)
+        print_section('\n[*] Trello URLs found: ' + str(total), all_urls, '--------------------')
+        all_urls = sorted_unique(all_urls)
 
     if len(all_ip) == 0:
         print('\n[*] No IPs found.')
@@ -950,6 +1389,8 @@ async def start(rest_args: argparse.Namespace | None = None):
                 continue
         ip_list = list(sorted(ip_list))
         print('\n'.join(map(str, ip_list)))
+        # Populate host_ip from ip_list for DNS lookup, virtual hosts search, and Shodan search
+        host_ip = ip_list
 
     if len(all_emails) == 0:
         print('\n[*] No emails found.')
@@ -958,6 +1399,14 @@ async def start(rest_args: argparse.Namespace | None = None):
         print('----------------------')
         all_emails = sorted(list(set(all_emails)))
         print('\n'.join(all_emails))
+
+    if len(all_people) == 0:
+        print('\n[*] No people found.')
+    else:
+        print('\n[*] People found: ' + str(len(all_people)))
+        print('----------------------')
+        for person in all_people:
+            print(person)
 
     if len(all_hosts) == 0:
         print('\n[*] No hosts found.\n\n')
@@ -1062,37 +1511,17 @@ async def start(rest_args: argparse.Namespace | None = None):
                         callback=dnssearch.generate_postprocessing_callback(
                             target=word, local_results=dnsrev, overall_results=full
                         ),
-                        nameservers=final_dns_resolver_list if len(final_dns_resolver_list) > 0 else None,
+                        nameservers=(final_dns_resolver_list if len(final_dns_resolver_list) > 0 else None),
                     )
                 )
                 # nameservers=list(map(str, dnsserver.split(','))) if dnsserver else None))
 
         # run all the reversing tasks concurrently
         await asyncio.gather(*__reverse_dns_tasks.values())
-        # Display the newly found hosts
         print('\n[*] Hosts found after reverse lookup (in target domain):')
         print('--------------------------------------------------------')
         for xh in dnsrev:
             print(xh)
-
-    # Virtual hosts search
-    if virtual == 'basic':
-        print('\n[*] Virtual hosts:')
-        print('------------------')
-        for data in host_ip:
-            basic_search = bingsearch.SearchBing(data, limit, start)
-            await basic_search.process_vhost()
-            results = await basic_search.get_allhostnames()
-            for result in results:
-                result = re.sub(r'[[</?]*\w*>]*', '', result)
-                result = re.sub('<', '', result)
-                result = re.sub('>', '', result)
-                print(data + '\t' + result)
-                vhost.append(data + ':' + result)
-                full.append(data + ':' + result)
-        vhost = sorted(set(vhost))
-    else:
-        pass
 
     # Screenshots
     screenshot_tups = []
@@ -1133,33 +1562,42 @@ async def start(rest_args: argparse.Namespace | None = None):
             total = int(end - start_time)
             mon, sec = divmod(total, 60)
             hr, mon = divmod(mon, 60)
-            total_time = '%02d:%02d' % (mon, sec)
+            total_time = f'{mon:02d}:{sec:02d}'
             print(f'Finished taking screenshots in {total_time} seconds')
             print('[+] Note there may be leftover chrome processes you may have to kill manually\n')
 
     # Shodan
     shodanres = []
     if shodan is True:
-        print('\033[94m[*] Searching Shodan. ')
+        print('[*] Searching Shodan. ')
         try:
             for ip in host_ip:
-                # TODO fix shodan
-                print('\tSearching for ' + ip)
-                shodan = shodansearch.SearchShodan()
-                shodandict = await shodan.search_ip(ip)
-                await asyncio.sleep(5)
-                rowdata = []
-                for key, value in shodandict[ip].items():
-                    if str(value) == 'Not in Shodan' or 'Error occurred in the Shodan IP search module' in str(value):
-                        break
-                    if isinstance(value, int):
-                        value = str(value)
-                    if isinstance(value, list):
-                        value = ', '.join(map(str, value))
-                    rowdata.append(value)
-                shodanres.append(rowdata)
-                print(ujson.dumps(shodandict[ip], indent=4, sort_keys=True))
-                print('\n')
+                try:
+                    print('\tSearching for ' + ip)
+                    shodan_search = shodansearch.SearchShodan()
+                    shodandict = await shodan_search.search_ip(ip)
+                    await asyncio.sleep(5)
+
+                    # Check if the result is a string (error message)
+                    if isinstance(shodandict[ip], str):
+                        print(f'{ip}: {shodandict[ip]}')
+                        continue
+
+                    # Process the results if it's a dictionary
+                    if isinstance(shodandict[ip], dict):
+                        rowdata = []
+                        for key, value in shodandict[ip].items():
+                            if isinstance(value, int):
+                                value = str(value)
+                            if isinstance(value, list):
+                                value = ', '.join(map(str, value))
+                            rowdata.append(value)
+                        shodanres.append(rowdata)
+                        print(ujson.dumps(shodandict[ip], indent=4, sort_keys=True))
+                        print('\n')
+                except Exception as ip_error:
+                    print(f'[SHODAN-error] Error searching {ip}: {ip_error}')
+                    continue
         except Exception as e:
             print(f'[!] An error occurred with Shodan: {e} ')
     else:
@@ -1176,20 +1614,24 @@ async def start(rest_args: argparse.Namespace | None = None):
             # XML REPORT SECTION
             with open(filename, 'w+') as file:
                 file.write('<?xml version="1.0" encoding="UTF-8"?><theHarvester>')
+                sanitized_args = [sanitize_for_xml(f'"{arg}"' if ' ' in arg else arg) for arg in sys.argv[1:]]
+                file.write('<cmd>' + ' '.join(sanitized_args) + '</cmd>')
                 for x in all_emails:
-                    file.write('<email>' + x + '</email>')
+                    file.write('<email>' + sanitize_for_xml(x) + '</email>')
                 for x in full:
                     host, ip = x.split(':', 1) if ':' in x else (x, '')
                     if ip and len(ip) > 3:
-                        file.write(f'<host><ip>{ip}</ip><hostname>{host}</hostname></host>')
+                        file.write(f'<host><ip>{sanitize_for_xml(ip)}</ip><hostname>{sanitize_for_xml(host)}</hostname></host>')
                     else:
-                        file.write(f'<host>{host}</host>')
+                        file.write(f'<host>{sanitize_for_xml(host)}</host>')
                 for x in vhost:
                     host, ip = x.split(':', 1) if ':' in x else (x, '')
                     if ip and len(ip) > 3:
-                        file.write(f'<vhost><ip>{ip} </ip><hostname>{host}</hostname></vhost>')
+                        file.write(
+                            f'<vhost><ip>{sanitize_for_xml(ip)} </ip><hostname>{sanitize_for_xml(host)}</hostname></vhost>'
+                        )
                     else:
-                        file.write(f'<vhost>{host}</vhost>')
+                        file.write(f'<vhost>{sanitize_for_xml(host)}</vhost>')
                 # TODO add Shodan output into XML report
                 file.write('</theHarvester>')
                 print('[*] XML File saved.')
@@ -1199,9 +1641,11 @@ async def start(rest_args: argparse.Namespace | None = None):
         try:
             # JSON REPORT SECTION
             filename = filename.rsplit('.', 1)[0] + '.json'
-            # create dict with values for json output
+            # create dict with values for JSON output
             json_dict: dict = dict()
-            # determine if a variable exists
+            # start by adding the command line arguments
+            json_dict['cmd'] = ' '.join([f'"{arg}"' if ' ' in arg else arg for arg in sys.argv[1:]])
+            # to determine if a variable exists
             # it should but just a validation check
             if 'ip_list' in locals():
                 if all_ip and len(all_ip) >= 1 and ip_list and len(ip_list) > 0:
@@ -1210,7 +1654,7 @@ async def start(rest_args: argparse.Namespace | None = None):
             if len(all_emails) > 0:
                 json_dict['emails'] = all_emails
 
-            if dnsresolve is None or len(final_dns_resolver_list) > 0 and len(full) > 0:
+            if dnsresolve is None or (len(final_dns_resolver_list) > 0 and len(full) > 0):
                 json_dict['hosts'] = full
             elif len(all_hosts) > 0:
                 json_dict['hosts'] = all_hosts
@@ -1238,6 +1682,9 @@ async def start(rest_args: argparse.Namespace | None = None):
             if len(linkedin_links_tracker) > 0:
                 json_dict['linkedin_links'] = linkedin_links_tracker
 
+            if len(all_people) > 0:
+                json_dict['people'] = all_people
+
             if takeover_status and len(takeover_results) > 0:
                 json_dict['takeover_results'] = takeover_results
 
@@ -1249,7 +1696,166 @@ async def start(rest_args: argparse.Namespace | None = None):
         except Exception as er:
             print(f'[!] An error occurred while saving the JSON file: {er} ')
         print('\n\n')
-        sys.exit(0)
+
+    # Enhanced code block for API Endpoint scanning feature
+    if args.api_scan or 'api_endpoints' in engines:
+        try:
+            # Define a default wordlist if none is specified
+            wordlist = args.wordlist if args.wordlist else str(DATA_DIR / 'wordlists' / 'api_endpoints.txt')
+
+            if not await anyio.Path(wordlist).exists():
+                print(f'\n[!] Wordlist not found: {wordlist}')
+                print('Creating a basic API wordlist for scanning...')
+                # Create a default simple API endpoint list
+                basic_endpoints = [
+                    '/api',
+                    '/api/v1',
+                    '/api/v2',
+                    '/api/v3',
+                    '/graphql',
+                    '/swagger',
+                    '/docs',
+                    '/redoc',
+                    '/swagger-ui',
+                    '/openapi.json',
+                    '/api-docs',
+                    '/rest',
+                    '/ws',
+                    '/swagger-ui.html',
+                    '/health',
+                    '/status',
+                    '/metrics',
+                    '/actuator',
+                    '/debug',
+                ]
+                temp_wordlist = str(DATA_DIR / 'wordlists' / 'temp_api_endpoints.txt')
+                with open(temp_wordlist, 'w') as f:
+                    f.write('\n'.join(basic_endpoints))
+                wordlist = temp_wordlist
+                print(f'Basic API wordlist created with {len(basic_endpoints)} endpoints.')
+
+            print(f'\n[*] Starting API endpoint scanning with wordlist: {wordlist}')
+            api_scanner = api_endpoints.SearchApiEndpoints(word=args.domain, wordlist=wordlist)
+            await api_scanner.do_search()
+
+            # Print results
+            endpoints_found = api_scanner.get_found_endpoints()
+            print(f'\n[*] API Endpoints found: {len(endpoints_found)}')
+            for endpoint in endpoints_found:
+                print(f'    - {endpoint}')
+
+            interesting_endpoints = api_scanner.get_interesting_endpoints()
+            print(f'\n[*] Interesting endpoints (200, 201, 202): {len(interesting_endpoints)}')
+            for endpoint in interesting_endpoints:
+                print(f'    - {endpoint}')
+
+            auth_required = api_scanner.get_auth_required()
+            print(f'\n[*] Endpoints requiring authentication: {len(auth_required)}')
+            for endpoint in auth_required:
+                print(f'    - {endpoint}')
+
+            api_versions = api_scanner.get_api_versions()
+            print(f'\n[*] Detected API versions: {len(api_versions)}')
+            for version in api_versions:
+                print(f'    - {version}')
+
+            rate_limits = api_scanner.get_rate_limits()
+            print(f'\n[*] Rate limited endpoints: {len(rate_limits)}')
+            for endpoint, info in rate_limits.items():
+                print(f'    - {endpoint} ({info.method})')
+
+            methods = api_scanner.get_methods()
+            print(f'\n[*] HTTP methods used: {", ".join(methods)}')
+
+            status_codes = api_scanner.get_status_codes()
+            print(f'\n[*] HTTP status codes encountered: {", ".join(map(str, status_codes))}')
+
+            # Add results to storage
+            db = stash.StashManager()
+            await db.store_all(word, endpoints_found, 'api_endpoint', 'api_scan')
+
+            # Use custom database function if available
+            try:
+                # Try to use the storage module if available
+                db_storage = stash.StashManager()
+                await db_storage.store_all(word, endpoints_found, 'api_endpoint', 'api_scan')
+            except AttributeError:
+                print('\n[*] No custom database functions found')
+
+            # Add to interesting URLs if any endpoints were found
+            if interesting_endpoints:
+                new_urls = [f'https://{args.domain}{endpoint}' for endpoint in interesting_endpoints]
+                interesting_urls.extend(new_urls)
+
+                # Also add complete domain paths to the interesting_urls list
+                all_urls.extend(new_urls)
+
+            print('\n[+] API scanning completed successfully.')
+
+        except MissingKey:
+            print('\n[!] API endpoint scanning requires a wordlist. Use -w to specify a wordlist file.')
+            print('    Creating a basic wordlist and trying again...')
+            # The wordlist creation code above could be used here
+        except Exception as e:
+            print(f'\n[!] An exception has occurred in API Endpoints scanning: {e}')
+            print('    Continuing with the rest of the scan...')
+            traceback.print_exc()  # More detailed error information for developers
+
+    if 'securityscorecard' in engines:
+        try:
+            print('\n[*] Performing SecurityScorecard scan...')
+            securityscorecard_scanner = securityscorecard.SearchSecurityScorecard(word)
+            await securityscorecard_scanner.process(use_proxy)
+
+            # Use the existing API to get results
+            hosts = await securityscorecard_scanner.get_hostnames()
+            if hosts:
+                print(f'\n[*] SecurityScorecard results: {len(hosts)} hosts found')
+                for host in hosts:
+                    print(f'    - {host}')
+
+                all_hosts.extend(hosts)
+
+            ips = await securityscorecard_scanner.get_ips()
+            if ips:
+                print(f'\n[*] SecurityScorecard IPs found: {len(ips)}')
+                for ip in ips:
+                    print(f'    - {ip}')
+                all_ip.extend(ips)
+
+        except Exception as e:
+            print(f'An exception has occurred in SecurityScorecard scanning: {e}')
+
+    if 'builtwith' in engines:
+        try:
+            print('\n[*] Performing BuiltWith scan...')
+            builtwith_scanner = builtwith.SearchBuiltWith(word)
+            await builtwith_scanner.process(use_proxy)
+
+            hosts = await builtwith_scanner.get_hostnames()
+            if hosts:
+                print(f'\n[*] BuiltWith results: {len(hosts)} hosts found')
+                for host in hosts:
+                    print(f'    - {host}')
+
+                # Add results to the main host list
+                all_hosts.extend(hosts)
+
+            urls = list(await builtwith_scanner.get_interesting_urls())
+            if urls:
+                print(f'\n[*] BuiltWith interesting URLs found: {len(urls)}')
+                for url in urls:
+                    print(f'    - {url}')
+                interesting_urls.extend(urls)
+
+        except Exception as e:
+            if isinstance(e, MissingKey):
+                if not args.quiet:
+                    print(MissingKey('BuiltWith'))
+                else:
+                    print(f'An exception has occurred in BuiltWith scanning: {e}')
+
+    sys.exit(0)
 
 
 async def entry_point() -> None:
