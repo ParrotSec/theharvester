@@ -27,7 +27,7 @@ dependencies = [
     "aiosqlite==0.22.1",
     "beautifulsoup4==4.14.3",
     "censys==2.2.19",
-    "certifi==2026.1.4",
+    "certifi==2026.7.22",
     "dnspython==2.8.0",
     "fastapi==0.129.2",
     "lxml==6.0.2",
