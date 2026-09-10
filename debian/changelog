@@ -1,3 +1,9 @@
+theharvester (4.10.1-0parrot2) echo; urgency=medium
+
+  * Rebuild package
+
+ -- Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>  Thu, 10 Sep 2026 13:03:13 +0200
+
 theharvester (4.10.1-0parrot1) echo; urgency=medium
 
   * Import new upstream release.
