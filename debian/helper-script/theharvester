@@ -2,5 +2,5 @@
 
 set -e
 
-echo -e "this command is deprecated, use theHarvester instead"
-/usr/bin/theHarvester $@
+printf '%s\n' 'this command is deprecated, use theHarvester instead' >&2
+exec /usr/bin/theHarvester "$@"

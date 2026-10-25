@@ -3,56 +3,85 @@ Section: utils
 Priority: optional
 Maintainer: Parrot Dev Team <team@parrotsec.org>
 Uploaders: Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>
-Build-Depends: debhelper-compat (= 12),
-               dh-python,
-               flit,
-               pybuild-plugin-pyproject,
+Build-Depends: debhelper-compat (= 13),
+               flit (>= 3.11),
+               nodejs (>= 18),
+               python3 (>= 3.13~),
+               python3 (<< 3.14),
+               python3-aiodns (>= 3.2),
+               python3-aiofiles (>= 24.1),
                python3-aiohttp (>= 3.13),
-               python3-all,
+               python3-aiohttp-socks (>= 0.10),
+               python3-aiosqlite (>= 0.21),
+               python3-anyio (>= 4.8),
+               python3-bs4 (>= 4.13),
+               python3-censys (>= 2.2.17),
                python3-certifi,
-               python-httpx,
-               python3-requests,
-               python3-setuptools,
-               python3-yaml
+               python3-dateutil (>= 2.9),
+               python3-dnspython (>= 2.7),
+               python3-fastapi (>= 0.115.11),
+               python3-httpx (>= 0.28),
+               python3-limits (>= 4.4),
+               python3-lxml (>= 5.4),
+               python3-netaddr (>= 1.3),
+               python3-packaging,
+               python3-pip (>= 25),
+               python3-pydantic (>= 2.10),
+               python3-pyee (>= 13),
+               python3-pyee (<< 14),
+               python3-pytest <!nocheck>,
+               python3-pytest-asyncio <!nocheck>,
+               python3-retrying (>= 1.3.3),
+               python3-shodan (>= 1.31),
+               python3-starlette (>= 0.46),
+               python3-ujson (>= 5.10),
+               python3-uvicorn (>= 0.32),
+               python3-uvloop (>= 0.21),
+               python3-venv,
+               python3-yaml (>= 6.0)
 Standards-Version: 4.7.3
 Homepage: https://github.com/laramies/theHarvester
+Rules-Requires-Root: no
 
 Package: theharvester
-Architecture: all
-Depends: python3,
-         python3-aiodns (>= 4.0),
-         python3-aiofiles (>= 25.1),
+Architecture: amd64 arm64
+Depends: chromium,
+         nodejs (>= 18),
+         python3 (>= 3.13~),
+         python3 (<< 3.14),
+         python3-aiodns (>= 3.2),
+         python3-aiofiles (>= 24.1),
          python3-aiohttp (>= 3.13),
-# XXX upstream wants 0.11.0
          python3-aiohttp-socks (>= 0.10),
-         python3-aiomultiprocess (>= 0.9),
-# XXX upstream wants 0.22
          python3-aiosqlite (>= 0.21),
-         python3-bs4 (>= 4.14),
-         python3-censys (>= 2.2.19),
-         python3-certifi (>= 2026.1.4),
-         python3-dateutil,
-# XXX upstream wants 2.8.0
+         python3-anyio (>= 4.8),
+         python3-bs4 (>= 4.13),
+         python3-censys (>= 2.2.17),
+         python3-certifi,
+         python3-dateutil (>= 2.9),
          python3-dnspython (>= 2.7),
-# XXX upstream wants 0.129.2
-         python3-fastapi (>= 0.118),
+         python3-fastapi (>= 0.115.11),
          python3-httpx (>= 0.28),
-         python3-lxml (>= 6.0),
+         python3-limits (>= 4.4),
+         python3-lxml (>= 5.4),
          python3-netaddr (>= 1.3),
-# XXX upstream wants 1.58
-         python3-playwright (>= 1.55),
-         python3-retrying (>= 1.4),
+         python3-pydantic (>= 2.10),
+         python3-pyee (>= 13),
+         python3-pyee (<< 14),
+         python3-retrying (>= 1.3.3),
          python3-shodan (>= 1.31),
-         python3-slowapi,
-         python3-starlette,
-         python3-ujson,
-# XXX upstream wants 0.41
-         python3-uvicorn (>= 0.38),
-         python3-uvloop (>= 0.22),
-         python3-yaml,
+         python3-starlette (>= 0.46),
+         python3-ujson (>= 5.10),
+         python3-uvicorn (>= 0.32),
+         python3-uvloop (>= 0.21),
+         python3-yaml (>= 6.0),
          ${misc:Depends},
-         ${python3:Depends},
+         ${shlibs:Depends}
 Description: tool for gathering e-mail accounts and subdomain names from public sources
  The package contains a tool for gathering subdomain names, e-mail addresses,
  virtual hosts, open ports/ banners, and employee names from different public
  sources (search engines, pgp key servers).
+ .
+ The CLI, REST API and screenshot support use the distribution's Python,
+ Node.js and Chromium. Libraries unavailable in the distribution are installed
+ in a private virtual environment and do not affect other Python applications.

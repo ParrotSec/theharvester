@@ -1,0 +1,25 @@
+Description: Use APT-managed Chromium instead of downloading a Playwright browser
+ Both the verification path and screenshot path must use the same browser.
+Author: Parrot Dev Team <team@parrotsec.org>
+Forwarded: not-needed
+
+--- a/theHarvester/screenshot/screenshot.py
++++ b/theHarvester/screenshot/screenshot.py
+@@ -39,7 +39,7 @@
+         # Helper function that verifies playwright & chromium is installed
+         try:
+             async with async_playwright() as p:
+-                browser = await p.chromium.launch()
++                browser = await p.chromium.launch(executable_path='/usr/bin/chromium')
+                 await browser.close()
+             print('Playwright and Chromium are successfully installed.')
+         except Exception as e:
+@@ -94,7 +94,7 @@
+         url = url.replace('www.', '')
+         print(f'Attempting to take a screenshot of: {url}')
+         async with async_playwright() as p:
+-            browser = await p.chromium.launch(headless=True)
++            browser = await p.chromium.launch(headless=True, executable_path='/usr/bin/chromium')
+             # New browser context
+             context = await browser.new_context()
+             page = await context.new_page()

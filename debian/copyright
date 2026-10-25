@@ -20,9 +20,74 @@ License: GPL-2
  On Debian systems, the complete text of the GNU General
  Public License version 2 can be found in "/usr/share/common-licenses/GPL-2".
 
+Files: vendor/aiomultiprocess*
+Copyright: Amethyst Reese
+License: Expat
+
+Files: vendor/slowapi*
+Copyright: 2020 Laurent Savaete
+License: Expat
+
+Files: vendor/greenlet*
+Copyright: Armin Rigo, Christian Tismer and contributors
+           Python Software Foundation and Stackless Python contributors
+License: Expat and PSF-2
+Comment: The full upstream LICENSE and LICENSE.PSF are retained in the wheel
+ and sdist, and installed under
+ /usr/share/doc/theharvester/vendor-licenses/greenlet-3.3.0.dist-info/licenses/.
+
+Files: vendor/playwright*
+Copyright: Microsoft Corporation
+           Node.js contributors and third-party contributors listed in the
+           bundled LICENSE, NOTICE and *.LICENSE files
+License: Apache-2.0 and bundled-licenses
+Comment: The original wheels include Node.js, which is removed from the binary
+ package and replaced with the distro interpreter. All license notices from
+ the wheels, including notices covering the bundled JavaScript, are retained
+ under /usr/share/doc/theharvester/vendor-licenses/playwright/ and
+ /usr/share/doc/theharvester/vendor-licenses/playwright-1.60.0.dist-info/.
+
+License: Expat
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+ .
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ THE SOFTWARE.
+
+License: Apache-2.0
+ On Debian systems the full Apache License 2.0 is available in
+ /usr/share/common-licenses/Apache-2.0.
+
+License: PSF-2
+ The full Python Software Foundation License Version 2 supplied by Greenlet
+ is in LICENSE.PSF within the Greenlet source archive and wheel, and in
+ /usr/share/doc/theharvester/vendor-licenses/greenlet-3.3.0.dist-info/licenses/LICENSE.PSF.
+
+License: bundled-licenses
+ The full third-party copyright and license notices are supplied in
+ playwright/driver/LICENSE, playwright/driver/package/NOTICE and the
+ *.LICENSE files in playwright/driver/package/lib/ inside each wheel.
+ They are retained verbatim under
+ /usr/share/doc/theharvester/vendor-licenses/playwright/ in the binary package.
+ These cover Node.js and the JavaScript driver's third-party components;
+ they are not relicensed under the application's GPL.
+
 Files: debian/*
 Copyright: 2012 balding_parrot <baldingparrot@localhost.localdomain>
            2018 Sophie Brun <sophie@offensive-security.com>
+           2026 Parrot Dev Team <team@parrotsec.org>
 License: GPL-2+
  This package is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

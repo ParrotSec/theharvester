@@ -1,0 +1,2 @@
+# Upstream ignores all JSON files; the packaging lock must be versioned.
+!vendor-lock.json

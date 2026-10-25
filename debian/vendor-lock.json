@@ -1,0 +1,82 @@
+{
+  "upstream": {
+    "version": "4.11.1",
+    "url": "https://api.github.com/repos/laramies/theHarvester/tarball/4.11.1",
+    "sha256": "94aafdbf2e4e444cda41034476a36608535ba3004f636963a2adb47be50e6563"
+  },
+  "python": "3.13",
+  "artifacts": [
+    {
+      "project": "aiomultiprocess",
+      "version": "0.9.1",
+      "filename": "aiomultiprocess-0.9.1-py3-none-any.whl",
+      "architecture": "all",
+      "url": "https://files.pythonhosted.org/packages/ad/14/c48c2f5c96960f5649a72b96a0a31d45384b37d89a63f7ccea76bf4fceba/aiomultiprocess-0.9.1-py3-none-any.whl",
+      "sha256": "3a7b3bb3c38dbfb4d9d1194ece5934b6d32cf0280e8edbe64a7d215bba1322c6"
+    },
+    {
+      "project": "aiomultiprocess",
+      "version": "0.9.1",
+      "filename": "aiomultiprocess-0.9.1.tar.gz",
+      "architecture": "source",
+      "url": "https://files.pythonhosted.org/packages/02/d4/1e69e17dda5df91734b70d03dbbf9f222ddb438e1f3bf4ea8fa135ce46de/aiomultiprocess-0.9.1.tar.gz",
+      "sha256": "f0231dbe0291e15325d7896ebeae0002d95a4f2675426ca05eb35f24c60e495b"
+    },
+    {
+      "project": "slowapi",
+      "version": "0.1.9",
+      "filename": "slowapi-0.1.9-py3-none-any.whl",
+      "architecture": "all",
+      "url": "https://files.pythonhosted.org/packages/2b/bb/f71c4b7d7e7eb3fc1e8c0458a8979b912f40b58002b9fbf37729b8cb464b/slowapi-0.1.9-py3-none-any.whl",
+      "sha256": "cfad116cfb84ad9d763ee155c1e5c5cbf00b0d47399a769b227865f5df576e36"
+    },
+    {
+      "project": "slowapi",
+      "version": "0.1.9",
+      "filename": "slowapi-0.1.9.tar.gz",
+      "architecture": "source",
+      "url": "https://files.pythonhosted.org/packages/a0/99/adfc7f94ca024736f061257d39118e1542bade7a52e86415a4c4ae92d8ff/slowapi-0.1.9.tar.gz",
+      "sha256": "639192d0f1ca01b1c6d95bf6c71d794c3a9ee189855337b4821f7f457dddad77"
+    },
+    {
+      "project": "greenlet",
+      "version": "3.3.0",
+      "filename": "greenlet-3.3.0-cp313-cp313-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl",
+      "architecture": "arm64",
+      "url": "https://files.pythonhosted.org/packages/2c/80/fbe937bf81e9fca98c981fe499e59a3f45df2a04da0baa5c2be0dca0d329/greenlet-3.3.0-cp313-cp313-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl",
+      "sha256": "9f515a47d02da4d30caaa85b69474cec77b7929b2e936ff7fb853d42f4bf8808"
+    },
+    {
+      "project": "greenlet",
+      "version": "3.3.0",
+      "filename": "greenlet-3.3.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+      "architecture": "amd64",
+      "url": "https://files.pythonhosted.org/packages/fd/8e/424b8c6e78bd9837d14ff7df01a9829fc883ba2ab4ea787d4f848435f23f/greenlet-3.3.0-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "087ea5e004437321508a8d6f20efc4cfec5e3c30118e1417ea96ed1d93950527"
+    },
+    {
+      "project": "greenlet",
+      "version": "3.3.0",
+      "filename": "greenlet-3.3.0.tar.gz",
+      "architecture": "source",
+      "url": "https://files.pythonhosted.org/packages/c7/e5/40dbda2736893e3e53d25838e0f19a2b417dfc122b9989c91918db30b5d3/greenlet-3.3.0.tar.gz",
+      "sha256": "a82bb225a4e9e4d653dd2fb7b8b2d36e4fb25bc0165422a11e48b88e9e6f78fb"
+    },
+    {
+      "project": "playwright",
+      "version": "1.60.0",
+      "filename": "playwright-1.60.0-py3-none-manylinux1_x86_64.whl",
+      "architecture": "amd64",
+      "url": "https://files.pythonhosted.org/packages/22/7b/1d679f4fced4ea94efadd17103856d8c565384f68382a1681264e46f5925/playwright-1.60.0-py3-none-manylinux1_x86_64.whl",
+      "sha256": "1c2bfae7884fb3fb05b853290eab8f343d524e5016f2f1def702acbbdf14c93e"
+    },
+    {
+      "project": "playwright",
+      "version": "1.60.0",
+      "filename": "playwright-1.60.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+      "architecture": "arm64",
+      "url": "https://files.pythonhosted.org/packages/84/c2/1528d267d4442bd2c6b8eaeab819dd52c2030bf80e89293f0ba1f687473b/playwright-1.60.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+      "sha256": "43e66564125ee31b07a58cefb21e256d62d67d8d1713e6858df7a3019d8ed353"
+    }
+  ]
+}

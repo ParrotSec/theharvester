@@ -1,11 +1,12 @@
 #!/usr/bin/make -f
 
-# output every command that modifies files on the build system.
-#export DH_VERBOSE = 1
+export PYTHONDONTWRITEBYTECODE = 1
 
 %:
-	dh $@ --with python3 --buildsystem=pybuild
+	dh $@ --buildsystem=none
 
+override_dh_auto_install:
+	python3 debian/build-venv.py
+
+# Upstream tests run against the staged venv in build-venv.py, after installation.
 override_dh_auto_test:
-	# do not run tests during the build: most of the tests require
-	# network

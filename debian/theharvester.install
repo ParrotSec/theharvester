@@ -1,1 +1,3 @@
 debian/helper-script/* usr/bin
+theHarvester/data/api-keys.yaml etc/theHarvester
+theHarvester/data/proxies.yaml etc/theHarvester

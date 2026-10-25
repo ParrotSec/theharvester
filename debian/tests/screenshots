@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+src=$(pwd)
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+export HOME="$work" PYTHONDONTWRITEBYTECODE=1
+# An empty cache proves no Playwright browser download is required.
+export PLAYWRIGHT_BROWSERS_PATH="$work/no-downloaded-browsers"
+unset PLAYWRIGHT_NODEJS_PATH
+cd "$work"
+/usr/lib/theharvester/venv/bin/python -I -B "$src/debian/tests/smoke.py" screenshots

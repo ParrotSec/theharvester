@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+src=$(pwd)
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT HUP INT TERM
+export HOME="$work" PYTHONDONTWRITEBYTECODE=1
+unset THEHARVESTER_API_KEY API_RATE_LIMIT
+cd "$work"
+# Test wrappers from outside the checkout, including argument forwarding.
+theHarvester --help
+restfulHarvest --help
+theharvester --help
+/usr/lib/theharvester/venv/bin/python -I -B "$src/debian/check-runtime.py"
+/usr/lib/theharvester/venv/bin/python -I -B "$src/debian/test-offline.py"
+/usr/lib/theharvester/venv/bin/python -I -B "$src/debian/tests/smoke.py" basic

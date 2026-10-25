@@ -1,3 +1,20 @@
+theharvester (4.11.1-0parrot1) echo; urgency=medium
+
+  * Package upstream 4.11.1 with a private venv using the distro Python 3.13.
+  * Use Echo libraries and vendor only aiomultiprocess, Playwright, SlowAPI
+    and Greenlet, with hash-locked artifacts in a separate orig component.
+  * Build offline; use system Node.js and Chromium for screenshots.
+  * Preserve configuration and ship CLI, REST API and screenshot support.
+  * Build architecture-dependent packages and add offline and installed tests.
+
+ -- Parrot Dev Team <team@parrotsec.org>  Sun, 25 Oct 2026 15:30:00 +0100
+
+theharvester (4.10.1-0parrot3) echo; urgency=medium
+
+  * Fix wrong python3-httpx package name.
+
+ -- Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>  Sat, 12 Sep 2026 09:10:00 +0200
+
 theharvester (4.10.1-0parrot2) echo; urgency=medium
 
   * Rebuild package

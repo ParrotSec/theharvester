@@ -1,0 +1,121 @@
+theHarvester on Parrot Echo
+==========================
+
+This packaging targets upstream 4.11.1, the latest GitHub release checked when
+preparing it. The upstream import MUST be done before building: changing only
+debian/changelog does not update the application. build-venv.py checks this.
+
+Runtime layout
+--------------
+
+/usr/lib/theharvester/venv uses /usr/bin/python3.13 and system site-packages.
+The public launchers use Python's -I mode so user-site packages and PYTHONPATH
+cannot override the packaged dependencies. Nothing is installed into the global
+Python environment. Pip and activation scripts are not shipped in the venv.
+
+Use APT for every dependency except:
+  aiomultiprocess 0.9.1  - not packaged in Echo
+  slowapi 0.1.9         - not packaged in Echo
+  playwright 1.60.0     - not packaged in Echo
+  greenlet 3.3.0        - Playwright needs >=3.1.1; Echo has 3.1.0
+
+These versions follow upstream's 4.11.1 uv.lock. Pyee and Limits, including their
+transitive dependencies, come from APT. The distro Node.js replaces Playwright's
+bundled Node executable. Both screenshot launch paths use /usr/bin/chromium.
+There are no pip, uv or browser downloads during build, install, or normal use.
+
+The Python package metadata patch reflects the supported Echo dependency set.
+check-runtime.py checks private-to-private and private-to-system requirements;
+APT remains responsible for system-to-system constraints (distro Python metadata
+sometimes retains upstream upper bounds that the distro no longer enforces).
+The binary includes runtime-versions.json, vendor-lock.json and vendor licenses
+under /usr/share/doc/theharvester for auditing.
+
+Preparing the initial import
+----------------------------
+
+Run from the packaging checkout, with git-buildpackage and pristine-tar on the
+maintainer's machine. Fetching is a separate, network-enabled preparation step:
+
+    python3 debian/vendor.py fetch --output-dir ..
+
+This produces these two archives, verifying every download against SHA256:
+
+    ../theharvester_4.11.1.orig.tar.gz
+    ../theharvester_4.11.1.orig-vendor.tar.gz
+
+The vendor component contains wheels for both supported architectures and the
+published sdists for aiomultiprocess, SlowAPI and Greenlet. Playwright distributes
+wheels, including its JavaScript driver and license notices, but no PyPI sdist.
+Its source repositories are https://github.com/microsoft/playwright-python and
+https://github.com/microsoft/playwright (tag v1.60.0).
+
+The current upstream branch initially contains 4.10.1. Preserve the pending
+Debian changes while importing the new upstream and vendor component:
+
+    git stash push --include-untracked -m 'theHarvester venv packaging' -- debian
+    gbp import-orig --upstream-version=4.11.1 --component=vendor \
+        ../theharvester_4.11.1.orig.tar.gz
+    git stash pop
+
+Do not discard the stash if applying it reports a conflict. This workflow also
+preserves the previously pending 4.10.1-0parrot3 changelog/control changes.
+Review the resulting diff, then commit the packaging changes:
+
+    git add debian
+    git commit -m 'Package theHarvester 4.11.1 with private missing dependencies'
+
+The vendor component is imported into upstream/vendor and tracked by
+pristine-tar, just like the main orig archive. debian/gbp.conf declares the
+component for subsequent exports. Do not commit hand-generated venvs or download
+new dependency versions from debian/rules.
+
+Build and test
+--------------
+
+Export a source package, then build it in a clean native Echo chroot. -d below
+only skips dependency checks on the SOURCE-export machine; sbuild must install
+and check all declared build dependencies normally.
+
+    gbp buildpackage --git-export-dir=../build-area -S -us -uc -d
+    cd ../build-area
+    sbuild -d echo -c echo-amd64-sbuild theharvester_4.11.1-0parrot1.dsc
+    autopkgtest theharvester_4.11.1-0parrot1_amd64.changes \
+        -- schroot echo-amd64-sbuild
+
+Replace the schroot names with those from your infrastructure. Repeat natively
+for arm64 before publishing that architecture. The binary is NOT Architecture:
+all: Greenlet contains a CPython extension, and the vendor set currently covers
+CPython 3.13 on amd64 and arm64 only. Dependencies intentionally block a Python
+3.14 transition until the package has been rebuilt with an updated vendor set.
+
+The build assembles the venv offline, checks the dependency closure and CLI/API
+entry points, starts the system-Node Playwright driver, and runs deterministic
+upstream tests against the installed package outside the source tree.
+DEB_BUILD_OPTIONS=nocheck skips the unit suite, but not dependency/startup checks.
+Autopkgtest additionally tests rate limiting, authentication failure, SQLite,
+multiprocessing and a real screenshot of a loopback HTTP page with an empty
+Playwright browser cache. No external target or API credentials are required.
+
+Upstream tests that contact public services are excluded explicitly. One security
+test that launches real DNS and engine queries is also deselected. Functional
+compatibility still needs monitoring as external services change.
+
+Conffiles in /etc/theHarvester are managed normally by dpkg and survive upgrades.
+The default YAML files and wordlists also remain in the application's data/
+directory inside the venv. Old, dangling dist-packages symlinks are not shipped.
+
+Maintenance
+-----------
+
+Keep the four vendored libraries on the distribution's security-update radar;
+APT updates their system dependencies, but not these private copies. A Chromium
+update must pass the screenshot test before promotion: Playwright cannot promise
+compatibility with every future system browser version.
+
+For an upstream update, review its API changes and lockfile, refresh the explicit
+artifact URLs/hashes in vendor-lock.json, update the metadata patch, changelog
+and tests, and import both orig components. Never update hashes automatically
+when a download fails verification. For vendor-only changes to an already
+published upstream version, use a new source version/orig naming scheme (for
+example an incremented +ds suffix); do not replace a published orig tarball.

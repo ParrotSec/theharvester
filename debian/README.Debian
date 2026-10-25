@@ -1,0 +1,21 @@
+theHarvester on Parrot
+=====================
+
+Commands: theHarvester, theharvester (compatibility alias), restfulHarvest.
+The REST API is not started automatically and defaults to loopback.
+
+Configuration: /etc/theHarvester/api-keys.yaml and proxies.yaml. Files under
+~/.theHarvester take precedence, following upstream's configuration lookup.
+Wordlists and default configuration are included in the private package data.
+
+The application and four unavailable/incompatible libraries are installed in
+/usr/lib/theharvester/venv. The rest come from APT, including Python 3.13,
+Node.js and Chromium. No virtualenv activation or pip installation is necessary.
+Do not modify the package-managed venv using pip; use APT for package updates.
+
+Screenshots use the system Chromium, not a browser downloaded by Playwright.
+Both the CLI and REST API use the private environment automatically. Launchers
+ignore PYTHONPATH and Python's user site to avoid accidental dependency mixing.
+
+For version/provenance details see vendor-lock.json and runtime-versions.json
+in this directory. Full bundled license notices are under vendor-licenses/.

@@ -1,5 +1,7 @@
-Test-Command: python3 -m pytest tests
-Depends: @, python3-pytest, python3-pytest-asyncio
+Tests: installed
+Depends: @, python3-packaging, python3-pytest, python3-pytest-asyncio
+Restrictions: allow-stderr
 
-Test-Command: theHarvester -h
-Restrictions: superficial, allow-stderr
+Tests: screenshots
+Depends: @
+Restrictions: allow-stderr
