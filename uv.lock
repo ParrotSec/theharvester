@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -292,18 +292,17 @@ wheels = [
 
 [[package]]
 name = "censys"
-version = "2.2.19"
+version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "argcomplete" },
     { name = "backoff" },
     { name = "requests" },
     { name = "rich" },
-    { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/41/aa/ed0d0faf4f7015bac902cdad929f487f9baefd224ab6fa9aba5635dd5d60/censys-2.2.19.tar.gz", hash = "sha256:9202e17c2583d4b3d0af32a5be161ddb505edd390a9ca909f2e7470d4af19a97", size = 62101, upload-time = "2025-12-11T16:08:47.421Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0a/f1/a7da18ea36eabdc73a7fd5c80ce475a61c7a05a3912be64edb3c33980ca7/censys-2.3.0.tar.gz", hash = "sha256:7ebf18d6327acd27817265a5ad34342afae56f9f5c7f0016f651b82e593a6a33", size = 412111, upload-time = "2026-08-28T16:21:51.876Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/66/4b/96c1ebc5f8534c18527c81b4df9cdb2a96151010f540ecbb4c9c2af4fee4/censys-2.2.19-py3-none-any.whl", hash = "sha256:eaad49779a3bbe290e244222563a48e78ca33777fbbdf6d329d8b52223fc1084", size = 80582, upload-time = "2025-12-11T16:08:46.368Z" },
+    { url = "https://files.pythonhosted.org/packages/d0/b1/676fccf54dc874114db5bc1308e7a68fbc914e6c6c4bf7689060f483500d/censys-2.3.0-py3-none-any.whl", hash = "sha256:18280ad81a5f22892c0506def8551813991d6a3b227da5803c3f6eb4081997d7", size = 80616, upload-time = "2026-08-28T16:21:50.738Z" },
 ]
 
 [[package]]
@@ -1614,7 +1613,7 @@ requires-dist = [
     { name = "aiomultiprocess", specifier = "==0.9.1" },
     { name = "aiosqlite", specifier = "==0.22.1" },
     { name = "beautifulsoup4", specifier = "==4.14.3" },
-    { name = "censys", specifier = "==2.2.19" },
+    { name = "censys", specifier = "==2.3.0" },
     { name = "certifi", specifier = "==2026.5.20" },
     { name = "dnspython", specifier = "==2.8.0" },
     { name = "fastapi", specifier = "==0.136.3" },
