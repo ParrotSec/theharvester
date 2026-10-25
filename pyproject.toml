@@ -41,7 +41,7 @@ dependencies = [
     "slowapi==0.1.9",
     "ujson==5.12.1",
     "uvicorn==0.48.0",
-    "uvloop==0.22.1; platform_system != 'Windows'",
+    "uvloop==0.23.0; platform_system != 'Windows'",
     "winloop==0.6.3; platform_system == 'Windows'",
 ]
 
