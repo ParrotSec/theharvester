@@ -7,7 +7,7 @@ theharvester (4.11.1-0parrot1) echo; urgency=medium
   * Preserve configuration and ship CLI, REST API and screenshot support.
   * Build architecture-dependent packages and add offline and installed tests.
 
- -- Parrot Dev Team <team@parrotsec.org>  Sun, 25 Oct 2026 15:30:00 +0100
+ -- Lorenzo "Palinuro" Faletra <palinuro@parrotsec.org>  Sun, 25 Oct 2026 23:28:26 +0100
 
 theharvester (4.10.1-0parrot3) echo; urgency=medium
 

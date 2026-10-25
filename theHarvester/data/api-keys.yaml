@@ -28,6 +28,9 @@ apikeys:
   dnsdumpster:
     key:
 
+  dymo:
+    key:
+
   fofa:
     key:
     email:
@@ -59,6 +62,9 @@ apikeys:
   leaklookup:
     key:
 
+  mojeek:
+    key:
+  
   netlas:
     key:
 
@@ -78,6 +84,9 @@ apikeys:
     key:
 
   securityTrails:
+    key:
+
+  sherlockeye:
     key:
 
   shodan:

@@ -15,8 +15,7 @@ except Exception:
 
 
 class SearchWindvane:
-    """
-    Class uses the Windvane API to gather subdomains and domain intelligence
+    """Class uses the Windvane API to gather subdomains and domain intelligence
     API Documentation: https://windvane.lichoin.com
 
     The API provides several endpoints:
@@ -112,7 +111,7 @@ class SearchWindvane:
                                         self.totalhosts.add(domain.lower())
                         else:
                             # API error - stop pagination
-                            if response_data.get('code') not in [0]:
+                            if response_data.get('code') != 0:
                                 print(f'Windvane subdomain API error: {response_data.get("msg", "Unknown error")}')
                             break
 
@@ -309,6 +308,7 @@ class SearchWindvane:
 
         Args:
             api_key: Windvane API key for authenticated access
+
         """
         self.api_key = api_key
 
@@ -334,6 +334,7 @@ class SearchWindvane:
 
         Args:
             proxy: Whether to use proxy for requests
+
         """
         self.proxy = proxy
 

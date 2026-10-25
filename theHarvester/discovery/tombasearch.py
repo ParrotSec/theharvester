@@ -8,7 +8,7 @@ class SearchTomba:
     def __init__(self, word, limit, start) -> None:
         self.word = word
         self.limit = limit
-        self.limit = 10 if limit > 10 else limit
+        self.limit = min(limit, 10)
         self.start = start
         self.key = Core.tomba_key()
         if self.key[0] is None or self.key[1] is None:

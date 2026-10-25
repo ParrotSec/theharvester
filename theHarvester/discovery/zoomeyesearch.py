@@ -119,8 +119,7 @@ class SearchZoomEye:
         v = value.strip()
         if not v:
             return
-        if v.endswith('.'):
-            v = v[:-1]
+        v = v.removesuffix('.')
         container.add(v)
 
     async def fetch_subdomains(self) -> None:

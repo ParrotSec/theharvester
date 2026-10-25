@@ -36,9 +36,7 @@ class Parser:
         self.people: list[dict[str, str]] = []
 
     async def parse_text_tokens(self, results: list[dict[str, Any]]) -> Mapping[str, set[str] | list[dict[str, str]]]:
-        """
-        Extracts different types of information from the recognized text tokens
-        """
+        """Extracts different types of information from the recognized text tokens"""
         if not results:
             return {'people': set(), 'emails': set(), 'ips': set(), 'urls': set()}
 

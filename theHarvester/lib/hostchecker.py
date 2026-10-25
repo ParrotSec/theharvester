@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-Created by laramies on 2008-08-21.
+"""Created by laramies on 2008-08-21.
 Revised to use aiodns & asyncio on 2019-09-23
 """
 

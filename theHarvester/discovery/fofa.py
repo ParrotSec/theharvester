@@ -17,8 +17,7 @@ except Exception:
 
 
 class SearchFofa:
-    """
-    Class uses Fofa API to search for domain and host intelligence
+    """Class uses Fofa API to search for domain and host intelligence
     Fofa is a Chinese search engine for network-connected devices
     """
 

@@ -203,6 +203,54 @@ class TestInformationDisclosure:
             assert 'traceback' not in response_data, 'DEBUG mode exposes tracebacks to clients'
 
 
+class TestAdditionalAPIAuthentication:
+    """Test authentication and error handling for protected additional API routes."""
+
+    @pytest.fixture
+    def client(self):
+        """Create a test client for API testing."""
+        from theHarvester.lib.api.api import app
+
+        return TestClient(app)
+
+    def test_additional_endpoints_fail_closed_without_configured_api_key(self, client, monkeypatch):
+        monkeypatch.delenv('THEHARVESTER_API_KEY', raising=False)
+
+        response = client.post('/additional/all', json={'domain': 'example.com'})
+
+        assert response.status_code == 503
+
+    def test_additional_endpoints_reject_missing_or_invalid_api_key(self, client, monkeypatch):
+        monkeypatch.setenv('THEHARVESTER_API_KEY', 'test-secret')
+
+        missing_response = client.post('/additional/all', json={'domain': 'example.com'})
+        invalid_response = client.post('/additional/all', headers={'X-API-Key': 'wrong'}, json={'domain': 'example.com'})
+
+        assert missing_response.status_code == 401
+        assert invalid_response.status_code == 401
+
+    def test_additional_endpoints_do_not_expose_internal_errors(self, client, monkeypatch):
+        from theHarvester.lib.api import additional_endpoints
+
+        class FailingAdditionalAPIs:
+            def __init__(self, domain, api_keys):
+                self.domain = domain
+                self.api_keys = api_keys
+
+            async def process(self):
+                raise RuntimeError('/home/user/project/secret.py:123 internal failure')
+
+        monkeypatch.setenv('THEHARVESTER_API_KEY', 'test-secret')
+        monkeypatch.setattr(additional_endpoints, 'AdditionalAPIs', FailingAdditionalAPIs)
+
+        response = client.post('/additional/all', headers={'X-API-Key': 'test-secret'}, json={'domain': 'example.com'})
+
+        assert response.status_code == 500
+        response_text = str(response.json())
+        assert 'internal failure' not in response_text
+        assert '/home/user/project' not in response_text
+
+
 class TestPathTraversalPrevention:
     """Test path traversal prevention."""
 
@@ -377,6 +425,7 @@ class TestSecurityBestPractices:
         # Note: The /query endpoint requires 'source' as a list parameter
         test_cases = [
             ('/dnsbrute?domain=', 400),  # Empty domain should be rejected
+            ('/dnsbrute?domain=a', 422),  # Too short domain should be rejected by FastAPI validation
         ]
 
         for endpoint, expected_status in test_cases:
@@ -387,8 +436,7 @@ class TestSecurityBestPractices:
 
         # Test query endpoint with proper parameter format but invalid domain
         response = client.get('/query?domain=a&source=baidu')  # Too short domain
-        # This may or may not fail depending on validation, but we check it doesn't crash
-        assert response.status_code in [200, 400, 422, 500], 'Unexpected status code'
+        assert response.status_code == 422
 
 
 if __name__ == '__main__':

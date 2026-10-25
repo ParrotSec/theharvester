@@ -25,8 +25,7 @@ class SearchCriminalIP:
         if not cleaned:
             return None
 
-        if cleaned.startswith('*.'):
-            cleaned = cleaned[2:]
+        cleaned = cleaned.removeprefix('*.')
 
         if ':' in cleaned and cleaned.count(':') == 1:
             host, port = cleaned.rsplit(':', 1)
@@ -264,9 +263,7 @@ class SearchCriminalIP:
                         self._add_ip(ip.get('ip'))
                     elif isinstance(ip, str):
                         self._add_ip(ip)
-            elif isinstance(v, list):
-                self._collect_hosts_from_value(v)
-            elif isinstance(v, dict):
+            elif isinstance(v, list) or isinstance(v, dict):
                 self._collect_hosts_from_value(v)
 
         for domain_list in data.get('domain_list', []):
@@ -314,7 +311,7 @@ class SearchCriminalIP:
                 if isinstance(redirect, dict):
                     self._add_host_from_url(redirect.get('url'))
 
-        self.totalhosts = {host[4:] if host.startswith('www.') else host for host in self.totalhosts if '*.' + self.word != host}
+        self.totalhosts = {host.removeprefix('www.') for host in self.totalhosts if '*.' + self.word != host}
 
         # print(f'hostnames: {self.totalhosts}')
         # print(f'asns: {self.asns}')

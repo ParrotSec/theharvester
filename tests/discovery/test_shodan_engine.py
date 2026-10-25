@@ -39,6 +39,32 @@ class TestShodanEngine:
         assert excinfo.value.code == 0
 
         out = capsys.readouterr().out
-        assert 'A error occurred while processing a "work item"' not in out
+        assert 'An error occurred while processing a "work item"' not in out
         assert "a.example.com" in out
         assert "b.example.com" in out
+
+    @pytest.mark.asyncio
+    async def test_shodan_internetdb_ignores_non_string_resolved_addresses(self, monkeypatch):
+        from theHarvester.discovery import shodan_internetdb
+
+        monkeypatch.setattr(
+            shodan_internetdb.socket,
+            'getaddrinfo',
+            lambda *_args: [
+                (socket.AF_INET, socket.SOCK_STREAM, 0, '', ('203.0.113.1', 0)),
+                (socket.AF_INET, socket.SOCK_STREAM, 0, '', (12345, 0)),
+            ],
+            raising=True,
+        )
+
+        async def fake_fetch_all(urls, json=False, proxy=False):
+            assert urls == ['https://internetdb.shodan.io/203.0.113.1']
+            return [{'ip': '203.0.113.1', 'hostnames': ['www.example.com']}]
+
+        monkeypatch.setattr(shodan_internetdb.AsyncFetcher, 'fetch_all', fake_fetch_all, raising=True)
+
+        search = shodan_internetdb.SearchShodanInternetDB('example.com')
+        await search.process()
+
+        assert await search.get_hostnames() == {'www.example.com'}
+        assert await search.get_ips() == {'203.0.113.1'}

@@ -157,6 +157,7 @@ class SearchFullHunt:
 
         Raises:
             ValueError: If the filter name is not supported
+
         """
         if filter_name not in self.ALL_FILTERS:
             valid_filters = ', '.join(self.ALL_FILTERS)
@@ -172,6 +173,7 @@ class SearchFullHunt:
 
         Raises:
             ValueError: If any filter name is not supported
+
         """
         for name, value in filters.items():
             self.add_filter(name, value)
@@ -203,6 +205,7 @@ class SearchFullHunt:
 
         Returns:
             Dict containing the search results
+
         """
         query = self._build_query_string()
         encoded_query = quote(query)
@@ -440,6 +443,7 @@ class SearchFullHunt:
         Args:
             proxy: Whether to use a proxy for requests
             filters: Optional dictionary of filters to apply to the search
+
         """
         self.proxy = proxy
 

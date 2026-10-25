@@ -16,9 +16,7 @@ except Exception:
 
 
 class SearchGitlab:
-    """
-    Class uses GitLab API to search for domain references in projects and code
-    """
+    """Class uses GitLab API to search for domain references in projects and code"""
 
     def __init__(self, word) -> None:
         self.word = word

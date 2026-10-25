@@ -30,6 +30,7 @@ from theHarvester.discovery import (
     crtsh,
     dnssearch,
     duckduckgosearch,
+    dymosearch,
     fofa,
     fullhuntsearch,
     githubcode,
@@ -41,6 +42,7 @@ from theHarvester.discovery import (
     intelxsearch,
     leakix,
     leaklookup,
+    mojeek,
     netlas,
     onyphe,
     otxsearch,
@@ -54,6 +56,8 @@ from theHarvester.discovery import (
     searchhunterhow,
     securityscorecard,
     securitytrailssearch,
+    sherlockeye,
+    shodan_internetdb,
     shodansearch,
     subdomaincenter,
     subdomainfinderc99,
@@ -195,9 +199,9 @@ async def start(rest_args: argparse.Namespace | None = None):
         '-b',
         '--source',
         help="""baidu, bevigil, bitbucket, brave, bufferoverun,
-                            builtwith, censys, certspotter, chaos, commoncrawl, criminalip, crtsh, dehashed, dnsdumpster, duckduckgo, fofa, fullhunt, github-code,
-                            gitlab, hackertarget, haveibeenpwned, hudsonrock, hunter, hunterhow, intelx, leakix, leaklookup, netlas, onyphe, otx, pentesttools,
-                            projectdiscovery, rapiddns, robtex, rocketreach, securityscorecard, securityTrails, shodan, subdomaincenter,
+                            builtwith, censys, certspotter, chaos, commoncrawl, criminalip, crtsh, dehashed, dnsdumpster, duckduckgo, dymo, fofa, fullhunt, github-code,
+                            gitlab, hackertarget, haveibeenpwned, hudsonrock, hunter, hunterhow, intelx, leakix, leaklookup, mojeek, netlas, onyphe, otx, pentesttools,
+                            projectdiscovery, rapiddns, robtex, rocketreach, securityscorecard, securityTrails, sherlockeye, shodan, shodanInternetDB, subdomaincenter,
                             subdomainfinderc99, thc, threatcrowd, tomba, urlscan, venacus, virustotal, waybackarchive, whoisxml, windvane, yahoo, zoomeye""",
     )
 
@@ -224,7 +228,9 @@ async def start(rest_args: argparse.Namespace | None = None):
     try:
         db = stash.StashManager()
         await db.do_init()
-    except Exception:
+    except (AttributeError, OSError, RuntimeError, ValueError) as init_error:
+        if not args.quiet:
+            print(f'Error initializing StashManager: {init_error}')
         raise ValueError('Failed to initialize StashManager')
 
     if len(filename) > 0:
@@ -256,15 +262,15 @@ async def start(rest_args: argparse.Namespace | None = None):
         # 1.1.1.1,8.8.8.8 or 1.1.1.1, 8.8.8.8
         # resolvers.txt
         if await anyio.Path(dnsresolve).exists():
-            with open(dnsresolve, encoding='UTF-8') as fp:
-                for line in fp:
+            async with await anyio.open_file(dnsresolve, encoding='UTF-8') as fp:
+                async for line in fp:
                     line = line.strip()
                     if len(line) == 0:
                         continue
                     try:
                         _ = netaddr.IPAddress(line)
                         final_dns_resolver_list.append(line)
-                    except Exception as e:
+                    except (netaddr.core.AddrFormatError, ValueError, TypeError) as e:
                         print(f'An exception has occurred while reading from: {dnsresolve}, {e}')
                         print(f'Current line: {line}')
         else:
@@ -277,7 +283,7 @@ async def start(rest_args: argparse.Namespace | None = None):
                     # Verify user passed in an IP; this does not validate resolver behavior
                     _ = netaddr.IPAddress(item)
                     final_dns_resolver_list.append(item)
-                except Exception as e:
+                except (netaddr.core.AddrFormatError, ValueError, TypeError) as e:
                     print(f'Passed DNS resolver is invalid, skipping: {item} ({e})')
 
         # if for some reason, there are duplicates
@@ -324,8 +330,7 @@ async def start(rest_args: argparse.Namespace | None = None):
         store_interestingurls: bool = False,
         store_asns: bool = False,
     ) -> None:
-        """
-        Persist details into the database.
+        """Persist details into the database.
         The details to be stored are controlled by the parameters passed to the method.
 
         :param search_engine: search engine to fetch details from
@@ -661,6 +666,17 @@ async def start(rest_args: argparse.Namespace | None = None):
                         )
                     )
 
+                elif engineitem == 'dymo':
+                    try:
+                        dymo_search = dymosearch.SearchDymo(word)
+                        stor_lst.append(store(dymo_search, engineitem, store_host=True))
+                    except Exception as e:
+                        if isinstance(e, MissingKey):
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in dymo: {e}')
+                        else:
+                            show_default_error_message(engineitem, word, e)
+
                 elif engineitem == 'fofa':
                     try:
                         fofa_search = fofa.SearchFofa(word)
@@ -830,6 +846,23 @@ async def start(rest_args: argparse.Namespace | None = None):
                             print(f'A Missing Key error occurred in LeakLookup: {e}')
                         else:
                             print(f'An exception has occurred in LeakLookup search: {e}')
+
+                elif engineitem == 'mojeek':
+                    try:
+                        mojeek_search = mojeek.SearchMojeek(word, limit)
+                        stor_lst.append(
+                            store(
+                                mojeek_search,
+                                engineitem,
+                                store_host=True,
+                                store_emails=True,
+                            )
+                        )
+                    except Exception as e:
+                        if isinstance(e, MissingKey):
+                            print(f'A Missing Key error occurred in Mojeek: {e}')
+                        else:
+                            print(f'An exception has occurred in Mojeek search: {e}')
 
                 elif engineitem == 'netlas':
                     try:
@@ -1004,16 +1037,35 @@ async def start(rest_args: argparse.Namespace | None = None):
                             if not args.quiet:
                                 print(f'A Missing Key error occurred Security Trails: {e}')
 
+                elif engineitem == 'sherlockeye':
+                    try:
+                        sherlockeye_search = sherlockeye.SearchSherlockeye(word)
+                        stor_lst.append(
+                            store(
+                                sherlockeye_search,
+                                engineitem,
+                                store_host=True,
+                                store_ip=True,
+                                store_emails=True,
+                            )
+                        )
+                    except Exception as e:
+                        if isinstance(e, MissingKey):
+                            if not args.quiet:
+                                print(f'A Missing Key error occurred in sherlockeye: {e}')
+                        else:
+                            show_default_error_message(engineitem, word, e)
+
                 elif engineitem == 'shodan':
                     try:
                         shodan_search = shodansearch.SearchShodan()
 
                         # For normal module usage, we need to create a wrapper that works with the store function
                         class ShodanWrapper:
-                            def __init__(self, domain):
+                            def __init__(self, domain, shodan_client):
                                 self.word = domain
                                 self.hosts = set()
-                                self.shodan = shodan_search
+                                self.shodan = shodan_client
 
                             async def process(self, use_proxy: bool = False):
                                 import socket
@@ -1039,7 +1091,7 @@ async def start(rest_args: argparse.Namespace | None = None):
                             async def get_hostnames(self):
                                 return list(self.hosts)
 
-                        shodan_wrapper = ShodanWrapper(word)
+                        shodan_wrapper = ShodanWrapper(word, shodan_search)
                         stor_lst.append(store(shodan_wrapper, engineitem, store_host=True))
                     except Exception as e:
                         if isinstance(e, MissingKey):
@@ -1047,6 +1099,27 @@ async def start(rest_args: argparse.Namespace | None = None):
                                 print(f'A Missing Key error occurred in Shodan search: {e}')
                         else:
                             print(f'An exception has occurred in Shodan search: {e}')
+
+                elif engineitem == 'shodanInternetDB':
+                    try:
+                        shodanidb_search = shodan_internetdb.SearchShodanInternetDB(word)
+                        stor_lst.append(
+                            store(
+                                shodanidb_search,
+                                engineitem,
+                                store_host=True,
+                                store_ip=True,
+                            )
+                        )
+                    except ConnectionError as ce:
+                        if not args.quiet:
+                            print(f'Network connection error while accessing Shodan InternetDB: {ce}')
+                    except TimeoutError as te:
+                        if not args.quiet:
+                            print(f'Request to Shodan InternetDB timed out: {te}')
+                    except Exception as e:
+                        if not args.quiet:
+                            print(f'Unexpected error occurred in Shodan InternetDB module: {e}')
 
                 elif engineitem == 'subdomaincenter':
                     try:
@@ -1262,7 +1335,7 @@ async def start(rest_args: argparse.Namespace | None = None):
         elif rest_args is not None:
             try:
                 rest_args.dns_brute
-            except Exception:
+            except AttributeError:
                 print('\n[!] Invalid source.\n')
                 sys.exit(1)
         else:
@@ -1281,8 +1354,10 @@ async def start(rest_args: argparse.Namespace | None = None):
                 await stor
                 queue.task_done()
                 # Notify the queue that the "work item" has been processed.
-            except Exception:
-                print('\n A error occurred while processing a "work item".\n')
+            except Exception as work_item_error:
+                print(
+                    f'\n An error occurred while processing a "work item": {type(work_item_error).__name__}: {work_item_error}\n'
+                )
                 queue.task_done()
 
     async def handler(lst):
@@ -1292,7 +1367,7 @@ async def start(rest_args: argparse.Namespace | None = None):
             queue.put_nowait(stor_method)
         # Create three worker tasks to process the queue concurrently.
         tasks = []
-        for i in range(3):
+        for _i in range(3):
             task = asyncio.create_task(worker(queue))
             tasks.append(task)
 
@@ -1384,7 +1459,7 @@ async def start(rest_args: argparse.Namespace | None = None):
                         ip_list.append(str(netaddr.IPNetwork(ip)))
                     else:
                         ip_list.append(str(netaddr.IPAddress(ip)))
-            except Exception as e:
+            except (netaddr.core.AddrFormatError, ValueError, TypeError) as e:
                 print(f'An exception has occurred while adding: {ip} to ip_list: {e}')
                 continue
         ip_list = list(sorted(ip_list))
@@ -1437,7 +1512,7 @@ async def start(rest_args: argparse.Namespace | None = None):
                     if ':' in host:
                         _, addr = host.split(':', 1)
                         await db.store(word, addr, 'ip', 'DNS-resolver')
-                except Exception as e:
+                except (OSError, RuntimeError, ValueError, TypeError) as e:
                     print(f'An exception has occurred while attempting to insert: {host} IP into DB: {e}')
                     continue
         else:
@@ -1586,7 +1661,7 @@ async def start(rest_args: argparse.Namespace | None = None):
                     # Process the results if it's a dictionary
                     if isinstance(shodandict[ip], dict):
                         rowdata = []
-                        for key, value in shodandict[ip].items():
+                        for _key, value in shodandict[ip].items():
                             if isinstance(value, int):
                                 value = str(value)
                             if isinstance(value, list):
@@ -1610,32 +1685,33 @@ async def start(rest_args: argparse.Namespace | None = None):
                 filename = filename.rsplit('.', 1)[0] + '.xml'
             else:
                 filename = 'theHarvester/app/static/' + rest_filename.rsplit('.', 1)[0] + '.xml'
-            # TODO use aiofiles if user is using rest api
             # XML REPORT SECTION
-            with open(filename, 'w+') as file:
-                file.write('<?xml version="1.0" encoding="UTF-8"?><theHarvester>')
+            async with await anyio.open_file(filename, 'w+') as file:
+                await file.write('<?xml version="1.0" encoding="UTF-8"?><theHarvester>')
                 sanitized_args = [sanitize_for_xml(f'"{arg}"' if ' ' in arg else arg) for arg in sys.argv[1:]]
-                file.write('<cmd>' + ' '.join(sanitized_args) + '</cmd>')
-                for x in all_emails:
-                    file.write('<email>' + sanitize_for_xml(x) + '</email>')
+                await file.write('<cmd>' + ' '.join(sanitized_args) + '</cmd>')
+                for email in all_emails:
+                    await file.write('<email>' + sanitize_for_xml(email) + '</email>')
                 for x in full:
                     host, ip = x.split(':', 1) if ':' in x else (x, '')
                     if ip and len(ip) > 3:
-                        file.write(f'<host><ip>{sanitize_for_xml(ip)}</ip><hostname>{sanitize_for_xml(host)}</hostname></host>')
+                        await file.write(
+                            f'<host><ip>{sanitize_for_xml(ip)}</ip><hostname>{sanitize_for_xml(host)}</hostname></host>'
+                        )
                     else:
-                        file.write(f'<host>{sanitize_for_xml(host)}</host>')
+                        await file.write(f'<host>{sanitize_for_xml(host)}</host>')
                 for x in vhost:
                     host, ip = x.split(':', 1) if ':' in x else (x, '')
                     if ip and len(ip) > 3:
-                        file.write(
+                        await file.write(
                             f'<vhost><ip>{sanitize_for_xml(ip)} </ip><hostname>{sanitize_for_xml(host)}</hostname></vhost>'
                         )
                     else:
-                        file.write(f'<vhost>{sanitize_for_xml(host)}</vhost>')
+                        await file.write(f'<vhost>{sanitize_for_xml(host)}</vhost>')
                 # TODO add Shodan output into XML report
-                file.write('</theHarvester>')
+                await file.write('</theHarvester>')
                 print('[*] XML File saved.')
-        except Exception as error:
+        except (OSError, ValueError, TypeError, UnicodeEncodeError) as error:
             print(f'[!] An error occurred while saving the XML file: {error}')
 
         try:
@@ -1689,11 +1765,11 @@ async def start(rest_args: argparse.Namespace | None = None):
                 json_dict['takeover_results'] = takeover_results
 
             json_dict['shodan'] = shodanres
-            with open(filename, 'w+') as fp:
+            async with await anyio.open_file(filename, 'w+') as fp:
                 dumped_json = ujson.dumps(json_dict, sort_keys=True)
-                fp.write(dumped_json)
+                await fp.write(dumped_json)
             print('[*] JSON File saved.')
-        except Exception as er:
+        except (OSError, ValueError, TypeError, UnicodeEncodeError) as er:
             print(f'[!] An error occurred while saving the JSON file: {er} ')
         print('\n\n')
 
@@ -1701,7 +1777,7 @@ async def start(rest_args: argparse.Namespace | None = None):
     if args.api_scan or 'api_endpoints' in engines:
         try:
             # Define a default wordlist if none is specified
-            wordlist = args.wordlist if args.wordlist else str(DATA_DIR / 'wordlists' / 'api_endpoints.txt')
+            wordlist = args.wordlist or str(DATA_DIR / 'wordlists' / 'api_endpoints.txt')
 
             if not await anyio.Path(wordlist).exists():
                 print(f'\n[!] Wordlist not found: {wordlist}')
@@ -1729,8 +1805,8 @@ async def start(rest_args: argparse.Namespace | None = None):
                     '/debug',
                 ]
                 temp_wordlist = str(DATA_DIR / 'wordlists' / 'temp_api_endpoints.txt')
-                with open(temp_wordlist, 'w') as f:
-                    f.write('\n'.join(basic_endpoints))
+                async with await anyio.open_file(temp_wordlist, 'w') as f:
+                    await f.write('\n'.join(basic_endpoints))
                 wordlist = temp_wordlist
                 print(f'Basic API wordlist created with {len(basic_endpoints)} endpoints.')
 

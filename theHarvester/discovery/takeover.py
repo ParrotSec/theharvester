@@ -25,7 +25,7 @@ class TakeOver:
             resp = response[0]
             unparsed_json = ujson.loads(resp)
             for unparsed_fingerprint in unparsed_json:
-                if unparsed_fingerprint['service'] in ['Smugsmug']:
+                if unparsed_fingerprint['service'] == 'Smugsmug':
                     # Subdomain must be in format domain.smugsmug.com
                     # This will never happen as subdomains are parsed and filtered to be in format of *.word.com
                     continue

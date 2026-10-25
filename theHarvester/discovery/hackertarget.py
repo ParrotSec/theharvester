@@ -3,8 +3,7 @@ from theHarvester.lib.core import AsyncFetcher, Core
 
 
 class SearchHackerTarget:
-    """
-    Class uses the HackerTarget API to gather subdomains and IPs.
+    """Class uses the HackerTarget API to gather subdomains and IPs.
 
     This version supports reading a Hackertarget API key (if present) and
     appending it to the hackertarget request URLs as `apikey=<key>`.
