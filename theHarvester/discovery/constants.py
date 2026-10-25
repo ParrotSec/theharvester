@@ -4,8 +4,7 @@ from theHarvester.lib.core import AsyncFetcher, Core
 
 
 async def splitter(links):
-    """
-    Method that tries to remove duplicates
+    """Method that tries to remove duplicates
     LinkedinLists pulls a lot of profiles with the same name.
     This method tries to remove duplicates from the list.
     :param links: list of links to remove duplicates from
@@ -29,8 +28,7 @@ async def splitter(links):
 
 
 def filter(lst):
-    """
-    Method that filters list
+    """Method that filters list
     :param lst: list to be filtered
     :return: new filtered list
     """
@@ -69,8 +67,7 @@ async def search(text: str) -> bool:
 
 
 async def google_workaround(visit_url: str) -> bool | str:
-    """
-    Function that makes a request on our behalf if Google starts to block us
+    """Function that makes a request on our behalf if Google starts to block us
     :param visit_url: Url to scrape
     :return: Correct html that can be parsed by BS4
     """
@@ -109,9 +106,7 @@ async def google_workaround(visit_url: str) -> bool | str:
 
 
 class MissingKeyError(Exception):
-    """
-    :raise: When there is a module that has not been provided its API key
-    """
+    """:raise: When there is a module that has not been provided its API key"""
 
     def __init__(self, source: str | None) -> None:
         if source:

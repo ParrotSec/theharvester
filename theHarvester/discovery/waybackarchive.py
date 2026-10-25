@@ -4,9 +4,7 @@ from theHarvester.lib.core import AsyncFetcher, Core
 
 
 class SearchWaybackarchive:
-    """
-    Class uses Internet Archive's Wayback Machine CDX API to find historical subdomains
-    """
+    """Class uses Internet Archive's Wayback Machine CDX API to find historical subdomains"""
 
     def __init__(self, word) -> None:
         self.word = word

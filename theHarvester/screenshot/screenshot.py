@@ -1,5 +1,4 @@
-"""
-Screenshot module that utilizes playwright to asynchronously
+"""Screenshot module that utilizes playwright to asynchronously
 take screenshots
 """
 
@@ -76,14 +75,16 @@ class ScreenShotter:
             else:
                 connector = aiohttp.TCPConnector(ssl=sslcontext)
 
-            async with aiohttp.ClientSession(
-                timeout=timeout,
-                headers=headers,
-                connector=connector,
-            ) as session:
-                async with session.get(url, ssl=False, proxy=proxy_param) as resp:
-                    text = await resp.text('UTF-8')
-                    return f'http://{url}' if not url.startswith('http') else url, text
+            async with (
+                aiohttp.ClientSession(
+                    timeout=timeout,
+                    headers=headers,
+                    connector=connector,
+                ) as session,
+                session.get(url, ssl=False, proxy=proxy_param) as resp,
+            ):
+                text = await resp.text('UTF-8')
+                return f'http://{url}' if not url.startswith('http') else url, text
         except Exception as e:
             print(f'An exception has occurred while attempting to visit {url} : {e}')
             return '', ''

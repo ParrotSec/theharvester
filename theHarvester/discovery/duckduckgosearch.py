@@ -30,8 +30,7 @@ class SearchDuckDuckGo:
         self.totalresults += ''.join(all_resps)
 
     async def crawl(self, text: str) -> set[str]:
-        """
-        Function parses json and returns URLs.
+        """Function parses json and returns URLs.
         :param text: formatted json
         :return: set of URLs
         """

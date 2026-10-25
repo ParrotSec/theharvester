@@ -1,5 +1,4 @@
-"""
-============
+"""============
 DNS Browsing
 ============
 
@@ -56,8 +55,7 @@ NETWORK_REGEX: str = rf'\b({IP_REGEX})(?:\:({PORT_REGEX}))?(?:\/({NETMASK_REGEX}
 
 
 def serialize_ip_range(ip: str, netmask: str = '24') -> str:
-    """
-    Serialize a network range in a constant format, 'x.x.x.x/y'.
+    """Serialize a network range in a constant format, 'x.x.x.x/y'.
 
     Parameters
     ----------
@@ -72,11 +70,12 @@ def serialize_ip_range(ip: str, netmask: str = '24') -> str:
     -------
     out: str.
         The network OSI address, like '192.168.0.0/24'.
+
     """
     __ip_matches = re.search(NETWORK_REGEX, ip, re.IGNORECASE)
     if __ip_matches and __ip_matches.groups():
         __ip = __ip_matches.group(1)
-        __netmask = netmask if netmask else __ip_matches.group(3)
+        __netmask = netmask or __ip_matches.group(3)
         if __ip and __netmask:
             return str(IPv4Network(f'{__ip}/{__netmask}', strict=False))
         elif __ip:
@@ -87,8 +86,7 @@ def serialize_ip_range(ip: str, netmask: str = '24') -> str:
 
 
 def list_ips_in_network_range(iprange: str) -> list[str]:
-    """
-    List all the IPs in the range.
+    """List all the IPs in the range.
 
     Parameters
     ----------
@@ -100,6 +98,7 @@ def list_ips_in_network_range(iprange: str) -> list[str]:
     -------
     out: list.
         The list of IPs in the range.
+
     """
     try:
         __network = IPv4Network(iprange, strict=False)
@@ -109,16 +108,17 @@ def list_ips_in_network_range(iprange: str) -> list[str]:
 
 
 async def reverse_single_ip(ip: str, resolver: DNSResolver) -> str:
-    """
-    Reverse a single IP and output the linked CNAME, if it exists.
-        Parameters
-        ----------
+    """Reverse a single IP and output the linked CNAME, if it exists.
+
+    Parameters
+    ----------
         :param ip:  IP address to reverse
         :param resolver: DNS server to use
 
-        Returns
-        -------
+    Returns
+    -------
         :return str: with the corresponding CNAME or None
+
     """
     try:
         __host = await resolver.gethostbyaddr(ip)
@@ -128,8 +128,7 @@ async def reverse_single_ip(ip: str, resolver: DNSResolver) -> str:
 
 
 async def reverse_all_ips_in_range(iprange: str, callback: Callable, nameservers: list[str] | None = None) -> None:
-    """
-    Reverse all the IPs stored in a network range.
+    """Reverse all the IPs stored in a network range.
     All the queries are made concurrently.
 
     Parameters
@@ -146,6 +145,7 @@ async def reverse_all_ips_in_range(iprange: str, callback: Callable, nameservers
     Returns
     -------
     out: None.
+
     """
     loop = asyncio.get_event_loop()
     __resolver = DNSResolver(loop=loop, timeout=8, nameservers=nameservers)
@@ -162,8 +162,7 @@ async def reverse_all_ips_in_range(iprange: str, callback: Callable, nameservers
 
 
 def log_query(ip: str) -> None:
-    """
-    Display the current query in the console.
+    """Display the current query in the console.
 
     Parameters
     ----------
@@ -173,6 +172,7 @@ def log_query(ip: str) -> None:
     Results
     -------
     out: None.
+
     """
     sys.stdout.write(chr(27) + '[2K' + chr(27) + '[G')
     sys.stdout.write('\r' + ip + ' - ')
@@ -180,8 +180,7 @@ def log_query(ip: str) -> None:
 
 
 def log_result(host: str) -> None:
-    """
-    Display the query result in the console.
+    """Display the query result in the console.
 
     Parameters
     ----------
@@ -191,14 +190,14 @@ def log_result(host: str) -> None:
     Results
     -------
     out: None.
+
     """
     if host:
         print(host)
 
 
 def generate_postprocessing_callback(target: str, **allhosts: list[str]) -> Callable:
-    """
-    Postprocess the query results asynchronously too, instead of waiting for
+    """Postprocess the query results asynchronously too, instead of waiting for
     the querying stage to be completely finished.
 
     Parameters
@@ -213,6 +212,7 @@ def generate_postprocessing_callback(target: str, **allhosts: list[str]) -> Call
     out: Callable.
         A function that will update the collection of target subdomains
         when the query result is satisfying.
+
     """
 
     def append_matching_hosts(host: str) -> None:

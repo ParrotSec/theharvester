@@ -15,10 +15,7 @@ except Exception:
 
 
 class SearchThreatcrowd:
-    """
-    Class uses ThreatCrowd API to gather domain intelligence and subdomains
-
-    """
+    """Class uses ThreatCrowd API to gather domain intelligence and subdomains"""
 
     def __init__(self, word) -> None:
         self.word = word

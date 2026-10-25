@@ -15,8 +15,7 @@ except Exception:
 
 
 class SearchLeakix:
-    """
-    Class uses LeakIX API to search for domain leaks and subdomains
+    """Class uses LeakIX API to search for domain leaks and subdomains
     Note: LeakIX requires API key for most endpoints
     """
 

@@ -1,5 +1,4 @@
-"""
-API endpoint scanner module.
+"""API endpoint scanner module.
 This module contains the SearchApiEndpoints class that performs comprehensive API endpoint
 scanning, detection, and analysis on target domains with advanced features for security testing.
 """
@@ -12,6 +11,8 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Any
 from urllib.parse import urlparse
+
+import aiohttp
 
 from theHarvester.lib.core import AsyncFetcher, Core
 
@@ -46,9 +47,7 @@ class EndpointResult:
 
 
 class SearchApiEndpoints:
-    """
-    SearchApiEndpoints class for scanning common API endpoints on target domains.
-    """
+    """SearchApiEndpoints class for scanning common API endpoints on target domains."""
 
     def __init__(
         self,
@@ -62,8 +61,7 @@ class SearchApiEndpoints:
         verify_ssl: bool = True,
         additional_headers: dict[str, str] | None = None,
     ) -> None:
-        """
-        Initialize the SearchApiEndpoints class with advanced configuration options.
+        """Initialize the SearchApiEndpoints class with advanced configuration options.
 
         Args:
             word: The target domain to scan
@@ -75,6 +73,7 @@ class SearchApiEndpoints:
             follow_redirects: Whether to follow HTTP redirects
             verify_ssl: Whether to verify SSL certificates
             additional_headers: Additional HTTP headers to include in requests
+
         """
         self.word = word
         self.hosts: set[str] = set()
@@ -102,7 +101,7 @@ class SearchApiEndpoints:
         default_wordlist = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'wordlists', 'api_endpoints.txt'
         )
-        self.wordlist = wordlist if wordlist else default_wordlist
+        self.wordlist = wordlist or default_wordlist
 
         # Add comprehensive API paths categorized by functionality
         self.common_api_paths = [
@@ -388,9 +387,7 @@ class SearchApiEndpoints:
         self.logger = logger
 
     async def do_search(self) -> None:
-        """
-        Perform the API endpoint scan with advanced features.
-        """
+        """Perform the API endpoint scan with advanced features."""
         try:
             self.logger.info(f'Starting API endpoint scan for {self.word}')
 
@@ -443,7 +440,7 @@ class SearchApiEndpoints:
                 return 'https'
             else:
                 self.logger.info(f'[*] HTTPS request to {https_url} returned status: {getattr(response, "status", "No status")}')
-        except Exception as e:
+        except (aiohttp.ClientError, TimeoutError, OSError, TypeError, ValueError, AttributeError) as e:
             self.logger.error(f"Failed to fetch HTTPS URL '{https_url}': {e}")
 
         return 'http'  # Fallback to HTTP if HTTPS fails
@@ -473,19 +470,19 @@ class SearchApiEndpoints:
 
             return list(set(variations))  # Return unique endpoints
 
-        except Exception as e:
+        except OSError as e:
             self.logger.error(f'Error loading wordlist {self.wordlist}: {e}')
             return []
 
     async def _check_endpoint(self, url: str) -> EndpointResult | None:
-        """
-        Check if an endpoint exists and analyze its properties.
+        """Check if an endpoint exists and analyze its properties.
 
         Args:
             url: The URL to check.
 
         Returns:
             Optional[EndpointResult]: Result object or None if not found
+
         """
         methods = ['GET', 'POST', 'OPTIONS', 'HEAD', 'PUT', 'DELETE', 'PATCH']
         headers = self._get_headers()
@@ -518,7 +515,7 @@ class SearchApiEndpoints:
             except TimeoutError:
                 self.logger.debug(f'Timeout for {method} {url}')
                 continue
-            except Exception as e:
+            except (aiohttp.ClientError, OSError, TypeError, ValueError, AttributeError) as e:
                 self.logger.debug(f'Error checking {method} {url}: {e!s}')
                 continue
 
@@ -540,11 +537,11 @@ class SearchApiEndpoints:
         return headers
 
     def _process_response(self, url: str, method: str, response, response_time: float) -> EndpointResult | None:
-        """
-        Process and categorize API endpoint response with detailed analysis.
+        """Process and categorize API endpoint response with detailed analysis.
 
         Returns:
             Optional[EndpointResult]: Result object or None if not relevant
+
         """
         status = getattr(response, 'status', 0)
         if status == 0:
@@ -559,13 +556,13 @@ class SearchApiEndpoints:
         # Get response headers safely
         try:
             headers = dict(getattr(response, 'headers', {}))
-        except Exception as e:
+        except (TypeError, ValueError, AttributeError) as e:
             self.logger.error(f'Failed to get headers from response for URL {url}: {e}')
             headers = {}
 
         try:
             content = getattr(response, 'content', b'')
-        except Exception as e:
+        except (TypeError, AttributeError) as e:
             self.logger.error(f'Failed to get content from response for URL {url}: {e}')
             content = b''
 
@@ -580,7 +577,7 @@ class SearchApiEndpoints:
         if content:
             try:
                 content_preview = content.decode('utf-8', errors='ignore')[:200]
-            except Exception as e:
+            except (AttributeError, UnicodeDecodeError) as e:
                 self.logger.error(f'Failed to decode content for URL {url}: {e}')
 
         # Extract security headers
@@ -636,7 +633,7 @@ class SearchApiEndpoints:
                 tech_stack.append(tech)
 
             # Try to extract potential parameters from response
-            parameters = []
+            parameters: list[str] = []
 
             if 'json' in content_type.lower() and content:
                 try:
@@ -644,13 +641,13 @@ class SearchApiEndpoints:
 
                     # Extract top-level keys as potential parameters
                     if isinstance(json_data, dict):
-                        parameters = list(json_data.keys())
+                        parameters = [key for key in json_data if isinstance(key, str)]
                     else:
                         self.logger.error(f'JSON response is not a dictionary. Type: {type(json_data).__name__}')
 
                 except json.JSONDecodeError as e:
                     self.logger.error(f'Failed to parse JSON from response content: {e}')
-                except Exception as e:
+                except (TypeError, UnicodeDecodeError) as e:
                     self.logger.error(f'Unexpected error while extracting parameters from JSON: {e}')
 
         # Create result object
@@ -701,7 +698,7 @@ class SearchApiEndpoints:
                     self.logger.error(f'JSON at {url} is not a dictionary. Type: {type(schema).__name__}')
             except json.JSONDecodeError as e:
                 self.logger.error(f'Failed to parse JSON from {url}: {e}')
-            except Exception as e:
+            except (TypeError, UnicodeDecodeError) as e:
                 self.logger.error(f'Unexpected error while processing schema at {url}: {e}')
 
         return result
@@ -725,11 +722,11 @@ class SearchApiEndpoints:
             self.logger.info(f'Identified {len(path_patterns)} API path patterns for potential further scanning')
 
     def get_results_summary(self) -> dict[str, Any]:
-        """
-        Get a comprehensive summary of scan results.
+        """Get a comprehensive summary of scan results.
 
         Returns:
             Dict[str, Any]: Summary of scan results
+
         """
         return {
             'target': self.word,
@@ -748,17 +745,17 @@ class SearchApiEndpoints:
     def _get_tech_stack_summary(self) -> dict[str, int]:
         """Summarize detected technologies."""
         summary: dict[str, int] = {}
-        for url, techs in self.tech_stack.items():
+        for _url, techs in self.tech_stack.items():
             for tech in techs:
                 summary[tech] = summary.get(tech, 0) + 1
         return summary
 
     def get_detailed_results(self) -> list[dict[str, Any]]:
-        """
-        Get detailed results for all endpoints.
+        """Get detailed results for all endpoints.
 
         Returns:
             List[Dict[str, Any]]: List of endpoint result dictionaries
+
         """
         return [result.to_dict() for result in self.found_endpoints.values()]
 
@@ -811,8 +808,7 @@ class SearchApiEndpoints:
         return self.schema_detected
 
     def export_results(self, output_file: str | None = None, format: str = 'json') -> str | dict | None:
-        """
-        Export scan results to a file or return as string/dict.
+        """Export scan results to a file or return as string/dict.
 
         Args:
             output_file: Optional file path to save results
@@ -820,6 +816,7 @@ class SearchApiEndpoints:
 
         Returns:
             Union[str, Dict, None]: Results in requested format or None if saved to file
+
         """
         results = {'summary': self.get_results_summary(), 'endpoints': self.get_detailed_results()}
 

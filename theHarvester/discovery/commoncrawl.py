@@ -16,9 +16,7 @@ except Exception:
 
 
 class SearchCommoncrawl:
-    """
-    Class uses Common Crawl index API to gather subdomains from archived web data
-    """
+    """Class uses Common Crawl index API to gather subdomains from archived web data"""
 
     def __init__(self, word) -> None:
         self.word = word

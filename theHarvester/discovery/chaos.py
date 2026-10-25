@@ -16,9 +16,7 @@ except Exception:
 
 
 class SearchChaos:
-    """
-    Class uses ProjectDiscovery Chaos subdomain enumeration API
-    """
+    """Class uses ProjectDiscovery Chaos subdomain enumeration API"""
 
     def __init__(self, word) -> None:
         self.word = word

@@ -17,6 +17,7 @@ class SearchHudsonRock:
 
         Args:
             word: Domain or email to search for
+
         """
         self.word = word.strip().lower()
         self.base_url = 'https://cavalier.hudsonrock.com/api/json/v2/osint-tools'
@@ -72,6 +73,7 @@ class SearchHudsonRock:
 
         Returns:
             True if email format is valid
+
         """
         import re
 
@@ -83,6 +85,7 @@ class SearchHudsonRock:
 
         Args:
             domain: Domain to search for
+
         """
         url = f'{self.base_url}/search-by-domain?domain={domain}'
 
@@ -109,6 +112,7 @@ class SearchHudsonRock:
 
         Args:
             email: Email address to search for
+
         """
         url = f'{self.base_url}/search-by-email?email={email}'
 
@@ -135,6 +139,7 @@ class SearchHudsonRock:
 
         Args:
             response: JSON response from Hudson Rock domain search API
+
         """
         try:
             # Store overall statistics
@@ -179,6 +184,7 @@ class SearchHudsonRock:
         Args:
             urls_data: List of URL data dictionaries
             source_type: Type of source (employee, user, third_party)
+
         """
         extracted_count = 0
 
@@ -205,6 +211,7 @@ class SearchHudsonRock:
 
         Args:
             data: Response data dictionary
+
         """
         # Look for emails in various data fields
         email_fields = ['employees_emails', 'users_emails', 'emails']
@@ -228,6 +235,7 @@ class SearchHudsonRock:
 
         Args:
             response: JSON response from Hudson Rock email search API
+
         """
         try:
             # Add the searched email to our results
@@ -278,6 +286,7 @@ class SearchHudsonRock:
 
         Returns:
             True if IP format is valid
+
         """
         if not ip or '*' in ip or '•' in ip:
             return False
@@ -295,6 +304,7 @@ class SearchHudsonRock:
 
         Args:
             services: List of service dictionaries
+
         """
         for service in services:
             if isinstance(service, dict):
@@ -321,6 +331,7 @@ class SearchHudsonRock:
 
         Returns:
             Set of unique hostnames discovered from Hudson Rock data
+
         """
         return self.totalhosts
 
@@ -329,6 +340,7 @@ class SearchHudsonRock:
 
         Returns:
             Set of unique IP addresses discovered from Hudson Rock data
+
         """
         return self.totalips
 
@@ -337,6 +349,7 @@ class SearchHudsonRock:
 
         Returns:
             Set of unique email addresses discovered from Hudson Rock data
+
         """
         return self.emails
 
@@ -345,6 +358,7 @@ class SearchHudsonRock:
 
         Returns:
             List of dictionaries containing detailed stealer information
+
         """
         return self.infostealers
 
@@ -353,6 +367,7 @@ class SearchHudsonRock:
 
         Returns:
             Dictionary containing statistics about compromised data
+
         """
         return self.compromised_data
 
@@ -361,6 +376,7 @@ class SearchHudsonRock:
 
         Returns:
             Dictionary containing summary statistics
+
         """
         return {
             'search_target': self.word,
@@ -379,6 +395,7 @@ class SearchHudsonRock:
 
         Args:
             proxy: Whether to use proxy for requests
+
         """
         self.proxy = proxy
         self.logger.info(f'Starting Hudson Rock processing for: {self.word}')

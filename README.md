@@ -3,12 +3,16 @@
 ![TheHarvester CI](https://github.com/laramies/theHarvester/workflows/TheHarvester%20Python%20CI/badge.svg) ![TheHarvester Docker Image CI](https://github.com/laramies/theHarvester/workflows/TheHarvester%20Docker%20Image%20CI/badge.svg)
 [![Rawsec's CyberSecurity Inventory](https://inventory.raw.pm/img/badges/Rawsec-inventoried-FF5050_flat_without_logo.svg)](https://inventory.raw.pm/)
 
+
 About
 -----
 theHarvester is a simple to use, yet powerful tool designed to be used during the reconnaissance stage of a red
 team assessment or penetration test. It performs open source intelligence (OSINT) gathering to help determine
 a domain's external threat landscape. The tool gathers names, emails, IPs, subdomains, and URLs by using
 multiple public resources that include:
+
+## Package versions
+[![Packaging status](https://repology.org/badge/vertical-allrepos/theharvester.svg)](https://repology.org/project/theharvester/versions)
 
 Install and dependencies
 ------------------------
@@ -56,6 +60,8 @@ uv run ruff check
 uv run ruff format
 ```
 
+To protect the optional `/additional/*` REST API routes, set `THEHARVESTER_API_KEY` and pass the same value in the `X-API-Key` header. Those routes return `503` when the key is not configured.
+
 Passive modules
 ---------------
 
@@ -83,6 +89,8 @@ Passive modules
 
 * duckduckgo: DuckDuckGo search engine (https://duckduckgo.com)
 
+* dymo: Dymo API data verifier - confirms domains, surfaces typo suggestions and MX/fraud signals (https://dymo.tpeoficial.com)
+
 * fofa: FOFA search eingine (https://en.fofa.info)
 
 * fullhunt: Next-generation attack surface security platform (https://fullhunt.io)
@@ -103,6 +111,8 @@ Passive modules
 
 * leaklookup: Data breach search engine (https://leak-lookup.com)
 
+* mojeek: Mojeek search engine (https://www.mojeek.com)
+
 * netlas: A Shodan or Censys competitor (https://app.netlas.io)
 
 * onyphe: Cyber defense search engine (https://www.onyphe.io)
@@ -120,6 +130,8 @@ Passive modules
 * securityscorecard: helps TPRM and SOC teams detect, prioritize, and remediate vendor risk across their entire supplier ecosystem at scale (https://securityscorecard.com)
 
 * securityTrails: Security Trails search engine, the world's largest repository of historical DNS data (https://securitytrails.com)
+
+* sherlockeye: Reverse Lookup & AI-Powered OSINT (https://sherlockeye.io)
 
 * -s, --shodan: Shodan search engine will search for ports and banners from discovered hosts (https://shodan.io)
 
@@ -164,6 +176,7 @@ Documentation to setup API keys can be found at - https://github.com/laramies/th
 * criminalip - 100 free queries/month. 700k/month $59
 * dehashed - 500 credts $15, 5k credits $150
 * dnsdumpster - 50 free querries/day, $49
+* dymo - free tier available, paid plans for higher limits
 * fofa - query credits 10,000/month. 100k results/month $25
 * fullhunt - 50 free queries. 200 queries $29/month, 500 queries $59 
 * github-code
@@ -173,6 +186,7 @@ Documentation to setup API keys can be found at - https://github.com/laramies/th
 * intelx - free account is very limited. Business acount $2900
 * leakix - free 25 results pages, 3000 API requests/month. Bounty Hunter $29
 * leaklookup - 20 credits $10, 50 credits $20, 140 credits $50, 300 credits $100
+* mojeek - 5000 free credits $6.50, $1.30 CPM (Personal), $2.60 CPM (Startup), $3.90 CPM (Business)
 * netlas - 50 free requests/day. 1k requests $49, 10k requests $249
 * onyphe - 10M results/month $587
 * pentesttools - 5 assets netsec $95/month, 5 assets webnetsec $140/month
@@ -180,6 +194,7 @@ Documentation to setup API keys can be found at - https://github.com/laramies/th
 * rocketreach - 100 email lookups/month $48, 250 email lookups/month $108
 * securityscorecard - requires a work email
 * securityTrails - 50 free queries/month. 20k queries/month $500
+* sherlockeye - Intermediate $46 month, Advanced $120 month. Enterprise available.
 * shodan - Freelancer $69 month, Small Business $359 month
 * tomba - 25 free searches/month. 1k searches/month $39, 5k searches/month $89
 * venacus - 1 free search/day. 10 searches/day $12, 30 searches/day $36
@@ -188,8 +203,6 @@ Documentation to setup API keys can be found at - https://github.com/laramies/th
 * windvane - 100 free queries
 * zoomeye - 5 free results/day. 30/results/day $190/yr
 
-## Package versions
-[![Packaging status](https://repology.org/badge/vertical-allrepos/theharvester.svg)](https://repology.org/project/theharvester/versions)
 
 Comments, bugs, and requests
 ----------------------------

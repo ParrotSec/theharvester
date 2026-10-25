@@ -24,7 +24,7 @@ class SearchNetlas:
         headers = {'X-API-Key': self.key}
         response = await AsyncFetcher.fetch_all([api], json=True, headers=headers, proxy=self.proxy)
         amount_size = response[0]['count']
-        self.limit = amount_size if amount_size < self.limit else self.limit
+        self.limit = min(self.limit, amount_size)
 
     async def do_search(self) -> None:
         """Download domains for query 'q' size of 'limit'
